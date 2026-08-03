@@ -64,6 +64,7 @@ speakwise/
 │   │
 │   └── providers/
 │       ├── base.py           ← interfaces abstractas STT / TTS / LLM
+│       ├── factory.py        ← selección de provider por variable de entorno
 │       ├── stt_whisper_api.py
 │       ├── stt_whisperx.py
 │       ├── tts_openai.py
@@ -367,6 +368,8 @@ class LLMProvider(ABC):
     async def complete(self, messages: list, system: str, max_tokens: int = 400) -> str: ...
 ```
 
+> **Nota de implementación:** el `STTProvider.transcribe()` concreto (`stt_whisper_api.py`) devuelve texto y timestamps crudos de la API de Whisper. El cálculo de `wpm` y `fillers` a partir de esos timestamps lo hace `services/acoustic.py`, que arma el `Transcript` final antes de devolverlo al router — no el provider. Esto respeta la regla de `CODING_STANDARDS.md` §2 de que `providers` nunca importa `services`.
+
 ---
 
 ## Historial
@@ -375,3 +378,4 @@ class LLMProvider(ABC):
 |---|---|---|
 | 1.0 | Jul 2025 | Documento inicial |
 | 1.1 | Jul 2025 | Recorte post-auditoría: eliminado código de implementación, corregidos DB_PATH, OLLAMA_URL, pipeline MVP vs V2, añadidos config.py y exceptions.py al árbol |
+| 1.2 | Ago 2026 | Fase 1 de planVersion1.md: agregado `providers/factory.py` al árbol, aclarado que `wpm`/`fillers` los calcula `acoustic.py`, no el provider |
