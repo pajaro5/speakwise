@@ -1,0 +1,23 @@
+# Entorno
+.env
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Datos y logs
+*.db
+data/
+uvicorn.out.log
+uvicorn.err.log
+
+# Tests
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editor / OS
+.vscode/
+.DS_Store
+Thumbs.db

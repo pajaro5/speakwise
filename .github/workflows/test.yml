@@ -1,0 +1,20 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker compose build
+
+      - name: Create empty .env for build-time env_file requirement
+        run: cp .env.example .env
+
+      - name: Run test suite (excludes real-API integration tests)
+        run: docker compose run --rm speakwise pytest -v -m "not integration"

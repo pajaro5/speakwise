@@ -1,0 +1,23 @@
+services:
+  speakwise:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app/backend
+      - ./frontend:/app/frontend
+      - ./templates:/app/templates
+      - ./corpus:/app/corpus
+      - speakwise_data:/app/data
+    env_file:
+      - .env
+    command: >
+      uvicorn backend.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+      --reload-dir backend
+    restart: unless-stopped
+
+volumes:
+  speakwise_data:
