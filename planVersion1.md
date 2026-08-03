@@ -150,16 +150,27 @@ Orden pensado para respetar la dirección de dependencias de `CODING_STANDARDS.m
 
 ---
 
-### Fase 3 — Providers concretos (MVP)
+### Fase 3 — Providers concretos (revisado: software libre primero)
 
-**Tests primero (todos con `respx` mockeando la API externa, sin red real):**
-- `tests/providers/test_stt_whisper_api.py` — audio de prueba → texto + `words` con timestamps; error 5xx de la API → excepción de dominio, no `HTTPException`
-- `tests/providers/test_tts_openai.py` — texto → bytes de audio; API caída → excepción de dominio
-- `tests/providers/test_llm_claude.py` — mensajes + system prompt → string de respuesta; respeta `max_tokens`
+> **Cambio de alcance respecto al plan original:** el usuario pidió explícitamente priorizar software libre en todo lo posible, y usar la alternativa paga más económica cuando haga falta contratar un servicio. Esto amplía la Fase 3 de 3 a 6 providers, y agrega el servicio `ollama` a `docker-compose.yml`. Ver `DESIGN.md` §2 (tabla de stack actualizada) y `PRD.md` (cambio de decisión Ago 2026).
 
-**Implementación:** `providers/stt_whisper_api.py`, `providers/tts_openai.py`, `providers/llm_claude.py`.
+> **Ajuste posterior (mismo día):** se probó levantar el servicio `ollama` en Docker Compose y el usuario indicó que la PC de desarrollo no tiene recursos para correr un modelo de 7B. Se removió `ollama` de `docker-compose.yml` y se sacó `ollama_qwen` como default de LLM — el default pasa a ser **`deepseek`** (paga, la más económica). El provider `llm_ollama.py` se mantiene en el código y sus tests, disponible por `LLM_PROVIDER=ollama_qwen` para cuando se use en otra máquina.
 
-**DoD:** 3 suites en verde, sin llamadas reales a red en el run normal.
+**Jerarquía de providers final (por variable de entorno, `providers/factory.py`):**
+1. **Default — libre/local, liviano:** `whisperx_local` (faster-whisper, MIT) · `kokoro` (Kokoro-82M, Apache 2.0)
+2. **Default de LLM — paga más económica:** `deepseek` (compatible con SDK de OpenAI, más barato que Claude)
+3. **Disponibles por env var, no default:** `ollama_qwen` (libre pero pesado, 7B) · `whisper_api` / `openai` / `claude` (pagos, referencia para el test de integración de comparación de calidad)
+
+**Tests (todos mockeados, sin red real ni carga de modelos pesados):**
+- `tests/providers/test_stt_whisper_api.py`, `test_tts_openai.py`, `test_llm_claude.py` — providers pagos, mock con `respx`
+- `tests/providers/test_llm_deepseek.py` — mock con `respx` contra `api.deepseek.com`
+- `tests/providers/test_llm_ollama.py` — mock con `respx`, código y tests se mantienen aunque no sea el default
+- `tests/providers/test_stt_whisperx.py`, `test_tts_kokoro.py` — mock del modelo/pipeline (no se cargan pesos reales en tests unitarios, sería lento y no determinístico)
+- `tests/providers/test_factory.py` — confirma default (`whisperx_local`/`kokoro`/`deepseek`) y que `ollama_qwen` sigue funcionando si se selecciona explícitamente
+
+**Implementación:** los 6 módulos de provider + `Dockerfile`/`pyproject.toml` actualizados para instalar el extra `local` (`faster-whisper`, `kokoro`) + `espeak-ng` como dependencia de sistema para Kokoro. Sin servicio `ollama` en `docker-compose.yml`.
+
+**DoD:** las 9 suites en verde (46/46 tests totales del proyecto), sin llamadas reales a red ni carga de modelos en el run normal. `.env.example` con los providers libres/económicos como default.
 
 ---
 

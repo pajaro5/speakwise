@@ -119,10 +119,11 @@ Las 1,000 palabras representan ~2,500-3,000 unidades fonológicas activas. El si
 |---|---|
 | Múltiples usuarios / auth | Solo soy yo |
 | App móvil nativa (React Native) | PWA es suficiente para validar |
-| Modelos LLM locales (Ollama) | Costo marginal de APIs es irrelevante a esta escala |
 | Análisis de entonación completa | Requiere más investigación de las herramientas |
 | Spaced repetition sofisticado | Primero validar que la sesión básica funciona |
 | Modo offline en móvil | El PC siempre está disponible en casa |
+
+> **Cambio de decisión (Ago 2026):** los modelos locales/libres pasan a ser el **default en MVP** donde el hardware lo permite — `faster-whisper` (STT) y Kokoro (TTS) son livianos y sí son default. **Excepción: Ollama+Qwen (LLM, 7B) no corre en esta PC**, así que el default de LLM es **DeepSeek** (paga, la más económica frente a Claude/GPT); Ollama queda implementado en el código para uso futuro en otra máquina. Prioridad general: software libre primero cuando el hardware alcanza; si hace falta pagar, usar lo más económico. Ver `DESIGN.md` §2 y `planVersion1.md` Fase 3.
 
 ### Criterios de avance a V2
 
@@ -149,3 +150,5 @@ Las 1,000 palabras representan ~2,500-3,000 unidades fonológicas activas. El si
 | Versión | Fecha | Cambio |
 |---|---|---|
 | 1.0 | Jul 2025 | Documento inicial |
+| 1.1 | Ago 2026 | Modelos locales/libres pasan a MVP (ya no exclusivos de V2); prioridad software libre primero, alternativa paga más económica si hace falta |
+| 1.2 | Ago 2026 | Ollama+Qwen (LLM local) descartado como default por limitación de hardware; DeepSeek pasa a ser el default de LLM |

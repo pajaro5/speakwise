@@ -23,17 +23,21 @@ Fuente de verdad para: estructura de archivos, schema de DB, contratos de API.
 
 ## 2. Stack
 
-| Capa | MVP | V2 | Licencia |
+> **Principio de selección de providers (desde Fase 3 de `planVersion1.md`):** 1) software libre / local primero, siempre que el hardware lo soporte, 2) si hace falta un servicio pago, usar la alternativa más económica disponible. Cada provider tiene su interfaz común en `providers/base.py`, se elige por variable de entorno vía `providers/factory.py`.
+>
+> **Excepción — LLM:** Ollama+Qwen (7B local) quedó implementado y testeado (`providers/llm_ollama.py`) pero **no es el default**: la PC de desarrollo no tiene recursos para correr un modelo de 7B parámetros de forma razonable. El default de LLM es **DeepSeek** (paga, la más económica frente a Claude/GPT). Ollama sigue disponible por `LLM_PROVIDER=ollama_qwen` para cuando se use en una máquina con más recursos.
+
+| Capa | Default | Alternativa | Licencia (default) |
 |---|---|---|---|
-| STT | Whisper API | WhisperX + faster-whisper | MIT |
-| Fonemas | *(no en MVP)* | WhisperX wav2vec2 | MIT |
-| Acústico | librosa (WPM) | librosa + Parselmouth | ISC / GPL |
-| TTS | OpenAI TTS | Kokoro-82M | Apache 2.0 |
-| LLM | Claude API | Ollama + Qwen 3.5 | Apache 2.0 |
-| Backend | FastAPI | Mismo | MIT |
-| Frontend | HTML/JS + PWA | Mismo | — |
-| DB | SQLite | Mismo | Dominio público |
-| Corpus ref. | CMU Pronouncing Dict | Mismo | Libre |
+| STT | `faster-whisper` local (`whisperx_local`) — libre, liviano | Whisper API (`whisper_api`) | MIT |
+| Fonemas | *(no en MVP)* | — | — |
+| Acústico | librosa (WPM) | — | ISC / GPL |
+| TTS | Kokoro-82M local (`kokoro`) — libre, liviano | OpenAI TTS (`openai`) | Apache 2.0 |
+| LLM | **DeepSeek** (`deepseek`) — paga, la más económica | Ollama+Qwen (`ollama_qwen`, libre pero pesado — 7B) → Claude API (`claude`) | — |
+| Backend | FastAPI | — | MIT |
+| Frontend | HTML/JS + PWA | — | — |
+| DB | SQLite | — | Dominio público |
+| Corpus ref. | CMU Pronouncing Dict | — | Libre |
 
 ---
 
@@ -323,22 +327,27 @@ Ejecuta 3 queries SQL y devuelve el contexto del día. Total ≤ 300 tokens.
 ## 9. Variables de entorno
 
 ```bash
-# MVP
-STT_PROVIDER=whisper_api       # whisper_api | whisperx_local
-TTS_PROVIDER=openai            # openai | kokoro
-LLM_PROVIDER=claude            # claude | ollama_qwen
+# STT/TTS: default libre y local (livianos). LLM: default DeepSeek (paga, la mas
+# barata) -- Ollama+Qwen es libre pero pesa 7B, no es el default (ver §2).
+STT_PROVIDER=whisperx_local    # whisperx_local (default) | whisper_api
+TTS_PROVIDER=kokoro            # kokoro (default) | openai
+LLM_PROVIDER=deepseek          # deepseek (default) | ollama_qwen | claude
 
 ANTHROPIC_API_KEY=
 OPENAI_API_KEY=
+DEEPSEEK_API_KEY=
 
 HOST=0.0.0.0
 PORT=8000
 DB_PATH=/app/data/speakwise.db
 
-# Solo para V2 local
+# STT local (default)
 WHISPER_MODEL=base
+
+# Ollama: no se usa por default (ver nota arriba), pero el provider/config
+# quedan listos para cuando se corra en una maquina con mas recursos.
 OLLAMA_MODEL=qwen2.5:7b
-OLLAMA_URL=http://ollama:11434  # nombre del servicio en docker-compose
+OLLAMA_URL=http://ollama:11434
 
 API_COST_ALERT_USD=30
 ```
@@ -381,3 +390,5 @@ class LLMProvider(ABC):
 | 1.1 | Jul 2025 | Recorte post-auditoría: eliminado código de implementación, corregidos DB_PATH, OLLAMA_URL, pipeline MVP vs V2, añadidos config.py y exceptions.py al árbol |
 | 1.2 | Ago 2026 | Fase 1 de planVersion1.md: agregado `providers/factory.py` al árbol, aclarado que `wpm`/`fillers` los calcula `acoustic.py`, no el provider |
 | 1.3 | Ago 2026 | Fase 2 de planVersion1.md: eliminado `chunks.csv` del árbol (se generan en `seed.py`), aclarado que fonemas ARPAbet se derivan de `cmudict`, no se hand-authoring en CSV |
+| 1.4 | Ago 2026 | Fase 3 de planVersion1.md: providers locales/libres (`whisperx_local`, `kokoro`, `ollama_qwen`) pasan a ser el default en MVP, no V2 — decisión explícita del usuario ("todo en lo posible sea con software libre"). Agregado `llm_deepseek.py` como alternativa paga más económica que Claude cuando se necesite un servicio contratado. |
+| 1.5 | Ago 2026 | Ollama+Qwen removido de `docker-compose.yml` y como default de LLM — la PC de desarrollo no soporta correr un modelo de 7B. Nuevo default de LLM: DeepSeek (paga, más económica). El provider `llm_ollama.py` queda en el código, disponible por env var para uso futuro en otra máquina. |
