@@ -17,4 +17,4 @@ jobs:
         run: cp .env.example .env
 
       - name: Run test suite (excludes real-API integration tests)
-        run: docker compose run --rm speakwise pytest -v -m "not integration"
+        run: docker compose run --rm speakwise python -m pytest -v -m "not integration"

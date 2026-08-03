@@ -65,8 +65,8 @@ Revisando los 7 documentos en conjunto aparecieron inconsistencias y referencias
 | Providers externos en tests unitarios | **Mockeados siempre** — no se gasta dinero real ni se depende de red en el ciclo normal de desarrollo |
 | Test de integración real | Uno solo, marcado `@pytest.mark.integration`, excluido del run por defecto y de CI; se corre manualmente antes de un release para validar que las API keys y el flujo completo funcionan con las APIs reales |
 | Ciclo por task | red (test que falla) → verde (implementación mínima) → refactor → siguiente task |
-| Comando dev | `docker compose exec speakwise pytest -v` (contenedor ya corriendo, con hot-reload) |
-| Comando CI | `docker compose run --rm speakwise pytest -v -m "not integration"` |
+| Comando dev | `docker compose exec speakwise python -m pytest -v` (contenedor ya corriendo, con hot-reload) |
+| Comando CI | `docker compose run --rm speakwise python -m pytest -v -m "not integration"` |
 | Gate de BACKLOG | Un task no pasa a ✅ si `pytest` no está en verde para los tests que le corresponden |
 
 ---
@@ -239,7 +239,7 @@ Integra nuclear stress + chunk del día + conversación libre en un solo flujo d
 ### Fase 10 — Cierre de v1
 
 - Checklist completo de `DEFINITION-OF-DONE.md` (global + por feature de esta iteración)
-- `docker compose exec speakwise pytest -v` — suite completa en verde
+- `docker compose exec speakwise python -m pytest -v` — suite completa en verde
 - Commit final, tag `v1.0-mvp`, push a GitHub
 - Marcar todos los tasks de ITER-1 como ✅ en `BACKLOG.md`, mover la columna del tablero
 - **5 días de uso real diario sin fricción técnica** antes de considerar la iteración realmente "Hecho" (criterio explícito de `BACKLOG.md` — no es un checkbox de código, es uso real)
@@ -267,9 +267,9 @@ Integra nuclear stress + chunk del día + conversación libre en un solo flujo d
 # Desde C:\dev\speakwise
 
 docker compose up -d                              # levantar el entorno
-docker compose exec speakwise pytest -v            # correr toda la suite
-docker compose exec speakwise pytest -v -k seed     # correr un subset
-docker compose exec speakwise pytest -v -m integration   # test de integración real (gasta API)
+docker compose exec speakwise python -m pytest -v            # correr toda la suite
+docker compose exec speakwise python -m pytest -v -k seed     # correr un subset
+docker compose exec speakwise python -m pytest -v -m integration   # test de integración real (gasta API)
 docker compose logs -f                              # logs en vivo
 ```
 

@@ -8,6 +8,7 @@ services:
       - ./frontend:/app/frontend
       - ./templates:/app/templates
       - ./corpus:/app/corpus
+      - ./tests:/app/tests
       - speakwise_data:/app/data
     env_file:
       - .env
