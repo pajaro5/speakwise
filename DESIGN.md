@@ -83,10 +83,11 @@ speakwise/
 │   └── worksheet.html        ← Jinja2, @media print
 │
 └── corpus/
-    ├── words.csv             ← lemmas, formas, fonemas ARPAbet
-    ├── chunks.csv            ← chunks por lemma + tense + función
+    ├── words.csv             ← lemmas + formas + traducción ES (fonemas se derivan de cmudict en seed.py, no se guardan en CSV)
     └── patterns.csv          ← patrones fonéticos + familias
 ```
+
+> **Nota de implementación (Fase 2 de `planVersion1.md`):** no existe `chunks.csv`. Los chunks del ITER-1 se generan en `seed.py` a partir de plantillas por tense (`CHUNK_TEMPLATES`) aplicadas a `words.csv`, para no duplicar el mismo dato en dos archivos. Curación manual de chunks más ricos queda para una iteración futura. Los fonemas ARPAbet tampoco se hand-authoring: `seed.py` los deriva de `cmudict` (ya dependencia del proyecto) por forma, incluyendo `lfc_focus`/`stress_syl` calculados como la vocal con estrés primario (`...1`).
 
 ---
 
@@ -379,3 +380,4 @@ class LLMProvider(ABC):
 | 1.0 | Jul 2025 | Documento inicial |
 | 1.1 | Jul 2025 | Recorte post-auditoría: eliminado código de implementación, corregidos DB_PATH, OLLAMA_URL, pipeline MVP vs V2, añadidos config.py y exceptions.py al árbol |
 | 1.2 | Ago 2026 | Fase 1 de planVersion1.md: agregado `providers/factory.py` al árbol, aclarado que `wpm`/`fillers` los calcula `acoustic.py`, no el provider |
+| 1.3 | Ago 2026 | Fase 2 de planVersion1.md: eliminado `chunks.csv` del árbol (se generan en `seed.py`), aclarado que fonemas ARPAbet se derivan de `cmudict`, no se hand-authoring en CSV |

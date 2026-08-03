@@ -47,7 +47,7 @@ Revisando los 7 documentos en conjunto aparecieron inconsistencias y referencias
 ## 3. Decisiones
 
 1. **GitHub**: repo `speakwise`, visibilidad **pública**. ✅ Confirmado — se crea en Fase 0.
-2. **Corpus (top 50 lemmas + fonemas + traducciones)**: **pendiente de investigación**, a resolver antes de Fase 2. No bloquea Fase 0-1.
+2. **Corpus (top 50 lemmas + fonemas + traducciones)**: ✅ Resuelto en Fase 2 — top 50 verbos más frecuentes (consistente con el foco en formas verbales de PRD §5), traducciones curadas a mano en `words.csv`, fonemas ARPAbet derivados programáticamente de `cmudict` en `seed.py` (no hand-authored, evita errores de transcripción manual). Chunks generados por template desde la misma fila de `words.csv`, sin `chunks.csv` separado (ver `DESIGN.md` v1.3).
 3. **API keys reales**: se agregan más adelante, antes de la Fase 6. No bloquean Fase 0-5 (esas fases usan mocks).
 
 ---

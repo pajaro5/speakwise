@@ -29,15 +29,15 @@ ITER-5: Auto-ajuste  │             │                   │
 
 ### Tasks
 
-- [ ] **seed.py** — Poblar corpus con top 50 lemmas (GSL) + todas sus formas + fonemas CMU + traducción ES
+- [x] **seed.py** — Poblar corpus con top 50 lemmas (GSL) + todas sus formas + fonemas CMU + traducción ES
   - DoD: `SELECT COUNT(*) FROM word_forms` retorna ≥ 150 registros
   - DoD: Cada forma tiene `phonemes` en formato ARPAbet y `lfc_focus`
 
-- [ ] **seed.py** — Añadir 5 patrones fonéticos prioritarios con sus familias
+- [x] **seed.py** — Añadir 5 patrones fonéticos prioritarios con sus familias
   - Patrones: -age/-idge, -tion/-sion, sílabas elididas, letras mudas kn-/wr-, schwa
   - DoD: `SELECT COUNT(*) FROM phonetic_patterns` = 5
 
-- [ ] **seed.py** — Añadir chunks por forma verbal (top 50 lemmas × sus tiempos)
+- [x] **seed.py** — Añadir chunks por forma verbal (top 50 lemmas × sus tiempos)
   - DoD: ≥ 150 chunks con `function` y `level` definidos
 
 - [ ] **acoustic.py** — Pipeline básico: Whisper API + WPM + fillers
