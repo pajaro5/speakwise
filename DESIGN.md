@@ -341,9 +341,13 @@ Llamar esto al empezar la sesión, y pasar el `session_id` devuelto a `/api/tuto
     "spontaneous_uses": 0
   },
   "difficulty": "maintain",
-  "topic_options": ["tu semana de trabajo", "un viaje planeado", "algo que viste"]
+  "topic_options": ["tu semana de trabajo", "un viaje planeado", "algo que viste"],
+  "conversation_starters": ["So, how's it going?", "What have you been up to lately?", "So, tell me about your day."],
+  "linking_words": ["for example", "however", "between"]
 }
 ```
+
+`conversation_starters` y `linking_words` son pools curados en código (`curriculum.py`, sin tabla propia — igual que `topic_options`), 3 al azar por request. Apoyo para conversación libre pedido por el usuario tras probar la sesión real ("me quedo en blanco"): 3 categorías — frases para iniciar la charla, conectores para enlazar ideas, y temas (`topic_options`, ya existente).
 
 ---
 

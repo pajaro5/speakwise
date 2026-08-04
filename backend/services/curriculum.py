@@ -14,6 +14,33 @@ TOPIC_POOL = [
     "algo que aprendiste hace poco",
 ]
 
+# Apoyo para conversación libre — reportado por el usuario ("me quedo en
+# blanco"): frases para arrancar y conectores para enlazar ideas, además de
+# los temas de TOPIC_POOL. Sin tabla propia en el schema, pool curado acá.
+CONVERSATION_STARTERS = [
+    "So, how's it going?",
+    "What have you been up to lately?",
+    "Guess what happened to me today.",
+    "Have you ever tried something like this?",
+    "What do you think about this?",
+    "Can I tell you something?",
+    "So, tell me about your day.",
+    "I wanted to ask you something.",
+]
+
+LINKING_WORDS = [
+    "for example",
+    "also",
+    "but",
+    "however",
+    "because",
+    "on the other hand",
+    "in addition",
+    "between",
+    "actually",
+    "by the way",
+]
+
 
 def _forms_to_review(
     conn: sqlite3.Connection, today: str, limit: int = 5
@@ -106,4 +133,6 @@ def build_todays_plan(conn: sqlite3.Connection, today: str | None = None) -> dic
         "chunk_today": _chunk_of_the_day(conn),
         "difficulty": _difficulty(conn),
         "topic_options": random.sample(TOPIC_POOL, 3),
+        "conversation_starters": random.sample(CONVERSATION_STARTERS, 3),
+        "linking_words": random.sample(LINKING_WORDS, 3),
     }

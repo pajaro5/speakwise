@@ -47,12 +47,13 @@ def test_app_js_tutor_call_includes_session_id() -> None:
     assert "sessionId" in js
 
 
-def test_index_html_has_word_suggestions_panel_in_module_3() -> None:
-    """Panel de apoyo léxico — reportado por el usuario ("me quedo en blanco",
-    problema #1 del PRD). No es el panel completo de ITER-4, solo una lista
-    simple de palabras sugeridas para no bloquear la conversación."""
+def test_index_html_has_conversation_support_categories_in_module_3() -> None:
+    """Panel de apoyo a la conversación libre — reportado por el usuario
+    ("me quedo en blanco"). 3 categorías pedidas explícitamente: frases para
+    iniciar, conectores de ideas, temas para conversar."""
     html = _read("index.html")
-    assert 'id="word-suggestions"' in html
+    for element_id in ["conversation-starters", "linking-words", "topic-suggestions"]:
+        assert f'id="{element_id}"' in html, f"falta #{element_id}"
 
 
 def test_app_js_gives_clear_recording_state_feedback() -> None:

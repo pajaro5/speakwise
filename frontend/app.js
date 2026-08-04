@@ -20,7 +20,9 @@ const chunkFeedbackEl = document.getElementById("chunk-feedback");
 const nextToModule3Btn = document.getElementById("next-to-module-3-btn");
 
 const module3El = document.getElementById("module-3");
-const wordSuggestionsEl = document.getElementById("word-suggestions");
+const conversationStartersEl = document.getElementById("conversation-starters");
+const linkingWordsEl = document.getElementById("linking-words");
+const topicSuggestionsEl = document.getElementById("topic-suggestions");
 const recordBtn = document.getElementById("record-btn");
 const transcriptEl = document.getElementById("transcript");
 const tutorReplyEl = document.getElementById("tutor-reply");
@@ -100,8 +102,9 @@ async function startSession() {
     chunkTextEl.textContent = chunk.chunk;
     chunkFunctionEl.textContent = chunk.function;
   }
-  const words = todaysPlan.week_words || [];
-  wordSuggestionsEl.textContent = words.map((w) => w.form).join(", ");
+  conversationStartersEl.textContent = (todaysPlan.conversation_starters || []).join(" · ");
+  linkingWordsEl.textContent = (todaysPlan.linking_words || []).join(", ");
+  topicSuggestionsEl.textContent = (todaysPlan.topic_options || []).join(" · ");
 
   startScreenEl.classList.add("hidden");
   statusEl.textContent = "";

@@ -326,6 +326,26 @@ Suite completa tras los 4 fixes: 120/120 (nuevo test de seed sumado).
 
 ---
 
+### Fase 9.2 — Apoyo a conversación libre: 3 categorías (pedido del usuario tras probar el fix #3 de Fase 9.1) ✅
+
+El panel simple de Fase 9.1 (lista plana de `week_words`, ej. "be, is, being, was, been" — formas del mismo lemma, poco útil como sugerencia) se reemplaza por 3 categorías concretas que el usuario pidió explícitamente:
+
+1. Frases para iniciar la conversación
+2. Conectores de ideas (ej. "for example", "between")
+3. Temas para la conversación (ya existía como `topic_options`, ahora se muestra)
+
+**Backend (TDD):** `curriculum.py` — nuevos pools curados `CONVERSATION_STARTERS` (8 frases) y `LINKING_WORDS` (10 conectores), mismo patrón que `TOPIC_POOL` (sin tabla propia en el schema). `build_todays_plan()` agrega `conversation_starters` y `linking_words` (3 al azar c/u) al contrato de `/api/today`. Tests actualizados: `test_build_todays_plan_has_full_contract_shape` (curriculum) y `test_today_returns_200_with_full_contract` (router).
+
+**Frontend (TDD estructural):** `index.html` — panel `#word-suggestions` reemplazado por `#conversation-starters`/`#linking-words`/`#topic-suggestions` dentro de `#conversation-support`. `app.js` — poblados en `startSession()` desde los 3 nuevos campos del plan. Test: `test_index_html_has_conversation_support_categories_in_module_3`.
+
+**Verificado en vivo (Chrome, `startSession()` real contra la API real):** `linkers: "also, on the other hand, by the way"`, `starters: "So, how's it going? · So, tell me about your day. · Guess what happened to me today."`, `topics: "un problema que resolviste · algo que aprendiste hace poco · algo que viste"`.
+
+`DESIGN.md` actualizado con el nuevo contrato de `/api/today`. Sigue sin ser el panel adaptativo de ITER-4 (sin fading logic, sin tracking de `prompts_used`) — apoyo estático, alcance mínimo para no bloquear la conversación.
+
+Suite completa: 124/124 (2 de integración deseleccionados).
+
+---
+
 ### Fase 10 — Cierre de v1
 
 - Checklist completo de `DEFINITION-OF-DONE.md` (global + por feature de esta iteración)

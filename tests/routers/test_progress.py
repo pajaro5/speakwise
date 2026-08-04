@@ -29,8 +29,11 @@ def test_today_returns_200_with_full_contract(client: TestClient) -> None:
     body = response.json()
     assert set(body.keys()) == {
         "week_words", "pattern_focus", "chunk_today", "difficulty", "topic_options",
+        "conversation_starters", "linking_words",
     }
     assert len(body["topic_options"]) == 3
+    assert len(body["conversation_starters"]) == 3
+    assert len(body["linking_words"]) == 3
 
 
 def test_today_week_words_match_contract_shape(client: TestClient) -> None:

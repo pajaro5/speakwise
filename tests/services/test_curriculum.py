@@ -154,8 +154,11 @@ def test_build_todays_plan_has_full_contract_shape(seeded_db_path: str) -> None:
 
     assert set(plan.keys()) == {
         "week_words", "pattern_focus", "chunk_today", "difficulty", "topic_options",
+        "conversation_starters", "linking_words",
     }
     assert len(plan["topic_options"]) == 3
+    assert len(plan["conversation_starters"]) == 3
+    assert len(plan["linking_words"]) == 3
     assert plan["difficulty"] == "maintain"
 
 
