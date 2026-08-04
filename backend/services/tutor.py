@@ -3,12 +3,35 @@ from datetime import date
 
 from backend.database import create_session, update_session
 from backend.providers.base import LLMProvider
+from backend.services.curriculum import build_todays_plan
 
-SYSTEM_PROMPT = (
+BASE_SYSTEM_PROMPT = (
     "Sos un tutor de inglés conversacional. El objetivo del alumno es la "
     "inteligibilidad, no sonar nativo. Corregí con calidez, en inglés simple, "
     "y siempre proponé la forma correcta cuando el alumno comete un error."
 )
+
+
+def _build_system_prompt(conn: sqlite3.Connection) -> str:
+    plan = build_todays_plan(conn)
+    parts = [BASE_SYSTEM_PROMPT]
+
+    chunk = plan.get("chunk_today")
+    if chunk:
+        parts.append(
+            f'Chunk del día para practicar: "{chunk["chunk"]}". Si surge naturalmente '
+            "en la charla, invitá al alumno a usarlo — sin forzarlo."
+        )
+
+    words = plan.get("week_words") or []
+    if words:
+        forms = ", ".join(w["form"] for w in words)
+        parts.append(
+            f"Palabras a reforzar hoy: {forms}. Si podés, guiá la conversación para "
+            "que aparezcan de forma natural."
+        )
+
+    return " ".join(parts)
 
 
 async def get_tutor_reply(
@@ -23,7 +46,8 @@ async def get_tutor_reply(
     fillers: int,
 ) -> tuple[str, int]:
     messages = [*history, {"role": "user", "content": text}]
-    reply = await llm.complete(messages=messages, system=SYSTEM_PROMPT)
+    system_prompt = _build_system_prompt(conn)
+    reply = await llm.complete(messages=messages, system=system_prompt)
 
     if session_id is None:
         session_id = create_session(

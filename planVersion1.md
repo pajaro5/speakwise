@@ -269,7 +269,21 @@ Orden pensado para respetar la dirección de dependencias de `CODING_STANDARDS.m
 
 ---
 
-### Fase 9 — Sesión completa (3 módulos) + EVAL-06
+### Pausa deliberada antes de Fase 9 (Ago 2026)
+
+El usuario planteó una preocupación válida: construir 2 módulos de UI nuevos (nuclear stress, chunk del día) basados solo en la descripción del PRD, sin haber usado todavía lo que ya existe, es programar a ciegas — exactamente el riesgo que el propio `BACKLOG.md` previene con su criterio de "En uso" (5 días de uso real antes de dar algo por "Hecho").
+
+**Decisión:** en vez de construir los módulos separados de Fase 9, se conectó el motor de currículum (`curriculum.py`, Fase 5 — ya construido pero nunca usado) al tutor conversacional. Ahora `services/tutor.py` arma el system prompt dinámicamente con `curriculum.build_todays_plan()`: incluye el chunk del día y las palabras a reforzar, e instruye al LLM a guiarlas hacia la conversación de forma natural. Esto entrega valor real de vocabulario dirigido sin construir UI nueva — validación barata antes de invertir en módulos separados.
+
+**Tests (`tests/services/test_tutor.py`, 2 tests, TDD estricto):** el system prompt enviado al LLM incluye el chunk del día y al menos una de las formas a reforzar (verificado con un provider fake que captura el prompt real).
+
+**Hallazgo real de contenido, encontrado probando contra DeepSeek real:** el chunk generado por template para el verbo "be" es gramaticalmente raro — `"I be this every day."` no es inglés estándar (el propio tutor lo marcó como "informal" en su respuesta). Es una debilidad de los templates de `seed.py` (Fase 2): `"I {form} this every day"` no funciona bien para verbos irregulares como "be". **Pendiente, no bloqueante**: revisar/curar los templates de chunks, sobre todo para "be"/"have"/"do".
+
+**Fase 9 (los 2 módulos de UI separados) queda pausada indefinidamente** — se retoma solo si el uso real de la conversación libre + currículum conectado muestra que hace falta una experiencia de UI dedicada para nuclear stress y chunk del día, en vez de dejarlo fluir dentro de la charla.
+
+---
+
+### Fase 9 — Sesión completa (3 módulos) + EVAL-06 ⏸️ PAUSADA (ver nota arriba)
 
 Integra nuclear stress + chunk del día + conversación libre en un solo flujo de 20 minutos en el frontend, usando todo lo construido en Fases 1-8.
 
