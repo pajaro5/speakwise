@@ -330,6 +330,7 @@ Llamar esto al empezar la sesión, y pasar el `session_id` devuelto a `/api/tuto
     {"form": "thought", "tense": "past", "lfc_focus": "AO1", "score": 0.41}
   ],
   "pattern_focus": {
+    "id": 3,
     "name": "-age/-idge",
     "rule_es": "Termina en -age = /ɪdʒ/, la E no suena",
     "family": ["average", "manage", "village"]

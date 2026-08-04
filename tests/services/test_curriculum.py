@@ -72,8 +72,9 @@ def test_pattern_of_the_day_cold_start_picks_priority_1(seeded_db_path: str) -> 
         pattern = _pattern_of_the_day(conn)
 
     assert pattern is not None
-    assert set(pattern.keys()) == {"name", "rule_es", "family"}
+    assert set(pattern.keys()) == {"id", "name", "rule_es", "family"}
     assert isinstance(pattern["family"], list)
+    assert isinstance(pattern["id"], int)
 
 
 def test_pattern_of_the_day_excludes_mastered_stage_4(seeded_db_path: str) -> None:

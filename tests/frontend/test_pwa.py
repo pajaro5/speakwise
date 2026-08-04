@@ -38,6 +38,18 @@ def test_service_worker_has_fetch_listener() -> None:
     assert "addEventListener(\"fetch\"" in sw or "addEventListener('fetch'" in sw
 
 
+def test_service_worker_is_network_first_not_cache_first() -> None:
+    """cache-first sirve HTML/JS viejo indefinidamente tras un deploy nuevo —
+    bug real encontrado probando Fase 9 en vivo (el navegador mostraba la
+    versión de Fase 8 aunque el servidor ya tenía la de Fase 9)."""
+    sw = _read("service-worker.js")
+    assert "fetch(event.request)" in sw
+    fetch_block = sw.split('addEventListener("fetch"')[1]
+    fetch_call_pos = fetch_block.index("fetch(event.request)")
+    cache_match_pos = fetch_block.index("caches.match(event.request)")
+    assert fetch_call_pos < cache_match_pos, "debe intentar red antes que cache"
+
+
 def test_app_js_registers_service_worker() -> None:
     js = _read("app.js")
     assert "navigator.serviceWorker.register" in js

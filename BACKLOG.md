@@ -59,9 +59,11 @@ ITER-5: Auto-ajuste  │             │                   │
 
 - [ ] **Sesión completa** — 3 módulos: nuclear stress + chunk + conversación libre
   - DoD: sesión de 20 min de principio a fin sin errores
+  - Estado: código completo y verificado contra la DB/APIs reales (backend + frontend, 17 tests nuevos). 2 bugs reales encontrados y corregidos probando en vivo (auto-stop de grabación en módulos 1/2; service worker sirviendo HTML viejo — cache-first → network-first). **Falta**: correr la sesión completa con micrófono real de punta a punta (mismo patrón que Fases 7/8).
 
 - [ ] **EVAL-06** — Correr checklist completo
   - DoD: todos los checks en verde
+  - Estado: pendiente de la verificación manual de arriba.
 
 **Criterio de "En uso":** Usar la app diariamente durante 5 días seguidos.  
 **Criterio de "Hecho":** EVAL-06 pasa + 5 días de uso sin fricción técnica.

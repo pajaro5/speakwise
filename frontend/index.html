@@ -13,11 +13,40 @@
 </head>
 <body>
     <h1>🎙️ SpeakWise</h1>
-    <button id="record-btn">Grabar</button>
     <p id="status"></p>
-    <p id="transcript"></p>
-    <p id="tutor-reply"></p>
-    <audio id="tutor-audio" controls></audio>
+
+    <section id="start-screen">
+        <button id="start-session-btn">Empezar sesión</button>
+    </section>
+
+    <section id="module-1" class="module hidden">
+        <h2>Módulo 1 — Pronunciación</h2>
+        <p id="pattern-name"></p>
+        <p id="pattern-rule"></p>
+        <p id="pattern-family"></p>
+        <button id="listen-pattern-btn">Escuchar ejemplos</button>
+        <button id="practice-pattern-btn">Grabar mi intento</button>
+        <button id="next-to-module-2-btn" class="hidden">Siguiente →</button>
+    </section>
+
+    <section id="module-2" class="module hidden">
+        <h2>Módulo 2 — Chunk del día</h2>
+        <p id="chunk-text"></p>
+        <p id="chunk-function"></p>
+        <button id="listen-chunk-btn">Escuchar</button>
+        <button id="record-chunk-btn">Usarlo en una oración</button>
+        <p id="chunk-feedback"></p>
+        <button id="next-to-module-3-btn" class="hidden">Siguiente →</button>
+    </section>
+
+    <section id="module-3" class="module hidden">
+        <h2>Módulo 3 — Conversación libre</h2>
+        <button id="record-btn">Grabar</button>
+        <p id="transcript"></p>
+        <p id="tutor-reply"></p>
+        <audio id="tutor-audio" controls></audio>
+    </section>
+
     <script src="app.js"></script>
 </body>
 </html>

@@ -12,18 +12,39 @@ h1 {
   font-size: 2rem;
 }
 
-#record-btn {
-  font-size: 1.2rem;
-  padding: 12px 32px;
+.hidden {
+  display: none;
+}
+
+.module {
+  text-align: left;
+}
+
+.module h2 {
+  font-size: 1.1rem;
+  color: #2563eb;
+}
+
+button {
+  font-size: 1rem;
+  padding: 10px 24px;
   border-radius: 999px;
   border: none;
   background: #2563eb;
   color: white;
   cursor: pointer;
+  margin: 4px 4px 4px 0;
 }
 
-#record-btn:active {
+button:active {
   background: #1d4ed8;
+}
+
+#start-session-btn, #record-btn {
+  font-size: 1.2rem;
+  padding: 12px 32px;
+  display: block;
+  margin: 0 auto;
 }
 
 #status {

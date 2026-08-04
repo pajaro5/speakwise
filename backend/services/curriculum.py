@@ -38,7 +38,7 @@ def _forms_to_review(
 def _pattern_of_the_day(conn: sqlite3.Connection) -> dict | None:
     row = conn.execute(
         """
-        SELECT p.name, p.rule_es, p.family
+        SELECT p.id, p.name, p.rule_es, p.family
         FROM phonetic_patterns p
         LEFT JOIN pattern_progress pp ON pp.pattern_id = p.id
         WHERE pp.stage IS NULL OR pp.stage < 4
@@ -48,7 +48,12 @@ def _pattern_of_the_day(conn: sqlite3.Connection) -> dict | None:
     ).fetchone()
     if row is None:
         return None
-    return {"name": row["name"], "rule_es": row["rule_es"], "family": json.loads(row["family"])}
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "rule_es": row["rule_es"],
+        "family": json.loads(row["family"]),
+    }
 
 
 def _chunk_of_the_day(conn: sqlite3.Connection) -> dict | None:

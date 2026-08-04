@@ -279,13 +279,28 @@ El usuario planteó una preocupación válida: construir 2 módulos de UI nuevos
 
 **Hallazgo real de contenido, encontrado probando contra DeepSeek real:** el chunk generado por template para el verbo "be" es gramaticalmente raro — `"I be this every day."` no es inglés estándar (el propio tutor lo marcó como "informal" en su respuesta). Es una debilidad de los templates de `seed.py` (Fase 2): `"I {form} this every day"` no funciona bien para verbos irregulares como "be". **Pendiente, no bloqueante**: revisar/curar los templates de chunks, sobre todo para "be"/"have"/"do".
 
-**Fase 9 (los 2 módulos de UI separados) queda pausada indefinidamente** — se retoma solo si el uso real de la conversación libre + currículum conectado muestra que hace falta una experiencia de UI dedicada para nuclear stress y chunk del día, en vez de dejarlo fluir dentro de la charla.
+**Actualización — el usuario retomó Fase 9 explícitamente** después de ver la tabla completa de funcionalidad construida vs. pendiente. Se construyó con TDD, en incrementos backend → frontend.
 
 ---
 
-### Fase 9 — Sesión completa (3 módulos) + EVAL-06 ⏸️ PAUSADA (ver nota arriba)
+### Fase 9 — Sesión completa (3 módulos) + EVAL-06 ✅ backend+frontend construidos — verificación manual con micrófono pendiente
 
-Integra nuclear stress + chunk del día + conversación libre en un solo flujo de 20 minutos en el frontend, usando todo lo construido en Fases 1-8.
+**Backend (TDD, 6 tests nuevos):**
+- `database.py`: `upsert_pattern_progress` (cuenta exposición al patrón, sin scoring de precisión — eso es ITER-2), `mark_chunk_used` (actualiza `sessions.chunk_used`/`chunk_produced`)
+- `services/log.py`: `handle_log_event` — dispatcher para `POST /api/log` (diseñado recién, `DESIGN.md` solo tenía el nombre)
+- `POST /api/session/start` (nuevo endpoint, no estaba en `DESIGN.md`): crea la sesión *antes* de los módulos, para que los 3 compartan `session_id` desde el principio en vez de que `/api/tutor` cree uno recién en conversación libre
+
+**Frontend (TDD estructural, 11 tests nuevos):** `index.html` reestructurado en 3 secciones (`#module-1/2/3`) + pantalla de inicio; `app.js` reescrito — botón "Empezar sesión" trae `/api/today` + `/api/session/start`, popula módulo 1 (patrón fonético: escuchar ejemplos vía TTS + grabar intento con auto-stop a los 4s) y módulo 2 (chunk: escuchar + usarlo en una oración con auto-stop a los 5s, feedback automático de si se detectó el chunk), módulo 3 reusa el flujo de conversación libre ya construido (Fase 6/7) pero ahora con `session_id` real compartido en vez de `null`.
+
+**2 bugs reales encontrados probando en Chrome real (Claude en Chrome), ambos corregidos con TDD antes de dar por terminada la fase:**
+1. Los botones de grabar de módulo 1/2 iniciaban la grabación pero nunca la detenían (sin lógica de stop) — arreglado con auto-stop por tiempo, apropiado para grabaciones cortas de una frase.
+2. **El service worker (Fase 8) servía una versión vieja del HTML** — cache-first significa que, tras este mismo deploy, el navegador seguía mostrando la pantalla de Fase 8 aunque el servidor ya tenía la de Fase 9. Cambiado a network-first (intenta red primero, cache solo como fallback offline) + `CACHE_NAME` bump a `v2` para invalidar lo viejo + `skipWaiting()`/`clients.claim()` para que las actualizaciones futuras apliquen sin tener que cerrar todas las pestañas. Esto habría afectado tu instalación real en Android en cada deploy futuro si no se corregía.
+
+**Verificado en vivo, de punta a punta (sin micrófono real — eso sigue siendo verificación humana):** `/api/today` trae el plan correctamente, módulo 1 se puebla y registra práctica (`pattern_progress.sessions_practiced` confirmado en la DB real), módulo 2 registra el chunk usado (`sessions.chunk_used`/`chunk_produced` confirmado en la DB real), módulo 3 recibe el `session_id` compartido.
+
+**DoD:** ⚠️ **Parcial.** Todo el código y la lógica confirmados funcionando contra la DB y APIs reales. Falta la verificación manual con micrófono real de los 3 módulos encadenados (EVAL-06 completo) — mismo patrón que Fases 7/8.
+
+Suite completa: 121/121.
 
 **Tests primero:**
 - `tests/routers/test_session.py` (extensión) — flujo completo simulado de sesión (múltiples turnos) no deja la DB en estado inconsistente; sesión se puede recuperar completa al final

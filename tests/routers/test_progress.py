@@ -46,7 +46,7 @@ def test_today_pattern_focus_matches_contract_shape(client: TestClient) -> None:
     response = client.get("/api/today")
     body = response.json()
 
-    assert set(body["pattern_focus"].keys()) == {"name", "rule_es", "family"}
+    assert set(body["pattern_focus"].keys()) == {"id", "name", "rule_es", "family"}
 
 
 def test_today_chunk_matches_contract_shape(client: TestClient) -> None:
