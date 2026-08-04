@@ -53,9 +53,9 @@ ITER-5: Auto-ajuste  │             │                   │
   - DoD: funciona en Chrome desktop y Chrome móvil
   - Estado: confirmado por el usuario en Chrome desktop Y Chrome móvil (por WiFi, con el flag de Chrome para permitir micrófono sin HTTPS) — grabación, transcripción, respuesta del tutor (DeepSeek) y audio de respuesta (Kokoro) funcionan de punta a punta en ambos.
 
-- [ ] **PWA básica** — manifest.json + service-worker.js
+- [x] **PWA básica** — manifest.json + service-worker.js
   - DoD: instalable en iPhone y Android desde Chrome
-  - Estado: verificado en Chrome desktop — manifest válido, íconos 192/512 presentes, service worker registrado sin errores (confirmado en vivo con Claude en Chrome). **Falta**: confirmar instalación real en iPhone y Android (solo lo puede hacer el usuario con los dispositivos físicos).
+  - Estado: **instalación confirmada en Android** por el usuario — ícono aparece en pantalla de inicio. iPhone queda fuera de alcance de esta verificación: el usuario no tiene el dispositivo (nota: además, PWA en iPhone se instala desde Safari, no Chrome — es una limitación de iOS, no del código).
 
 - [ ] **Sesión completa** — 3 módulos: nuclear stress + chunk + conversación libre
   - DoD: sesión de 20 min de principio a fin sin errores

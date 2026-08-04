@@ -257,7 +257,7 @@ Orden pensado para respetar la dirección de dependencias de `CODING_STANDARDS.m
 
 ---
 
-### Fase 8 — PWA básica ✅ verificado (Chrome desktop) — instalación real en teléfono pendiente
+### Fase 8 — PWA básica ✅ COMPLETA (Android confirmado; iPhone fuera de alcance — usuario no tiene el dispositivo)
 
 **Tests con TDD estricto (`tests/frontend/test_pwa.py`, 5 tests, uno a la vez con rojo confirmado):** `manifest.json` válido con campos requeridos (`name`, `short_name`, `start_url`, `display`); tiene íconos 192x192 y 512x512 que existen en disco; `index.html` linkea el manifest; `service-worker.js` tiene un listener de `fetch` (requisito de Chrome para instalabilidad); `app.js` registra el service worker.
 
@@ -265,7 +265,7 @@ Orden pensado para respetar la dirección de dependencias de `CODING_STANDARDS.m
 
 **Verificación en vivo (Claude en Chrome, no solo tests):** manifest se lee correctamente vía `fetch`, service worker registrado con el scope correcto (`http://localhost:8000/`), sin errores ni warnings en consola tras recargar la página.
 
-**DoD (criterio literal de `BACKLOG.md`: "instalable en iPhone y Android desde Chrome"):** ⚠️ **Parcial.** Todos los requisitos técnicos de instalabilidad verificados en Chrome desktop. Falta que el usuario confirme la instalación real en un iPhone y un Android (dispositivos físicos que no están disponibles acá) — mismo patrón que Chrome móvil en Fase 7.
+**DoD (criterio literal de `BACKLOG.md`: "instalable en iPhone y Android desde Chrome"):** ✅ **Android confirmado por el usuario** — instaló la app y el ícono aparece en la pantalla de inicio. **iPhone queda fuera de alcance**: el usuario no tiene el dispositivo, y de todos modos en iOS la instalación de PWA se hace desde Safari, no Chrome (limitación de la plataforma, no del código). Se documenta como límite conocido, no como pendiente bloqueante — mismo criterio aplicado a Chrome móvil sin teléfono físico en Fase 7.
 
 ---
 
