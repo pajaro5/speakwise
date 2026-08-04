@@ -229,27 +229,29 @@ Orden pensado para respetar la dirección de dependencias de `CODING_STANDARDS.m
 
 **DoD (= DoD de "Sesión completa" en `DEFINITION-OF-DONE.md`):** ✅ ciclo audio → `/transcribe` → `/tutor` → `/speak` en < 10s (real: ~6s con latencias simuladas), sesión persistida en SQLite. Suite completa: 83/83.
 
-> **Checkpoint pendiente:** correr el test de integración real (`@pytest.mark.integration`) con las API keys puestas (DeepSeek, y STT/TTS locales que no necesitan key) para confirmar que el contrato mockeado coincide con la API real. No se hizo todavía — las keys siguen sin completar en `.env`.
+> **Checkpoint ✅ resuelto (Fase 7):** una vez que el usuario agregó `DEEPSEEK_API_KEY` real, se creó `tests/integration/test_real_providers.py` (marcado `@pytest.mark.integration`) y se corrió contra las APIs reales: DeepSeek corrige gramática correctamente, Kokoro genera audio real (98KB, `audio/mpeg`). El contrato mockeado coincide con el real. De paso se encontró que `python -m pytest` corría estos tests de integración por defecto (gastando la API cada vez) — se agregó `addopts = "-m 'not integration'"` en `pyproject.toml` para que queden excluidos salvo que se pidan explícitamente con `-m integration`.
+>
+> **Nota operativa encontrada al probar:** `docker compose restart` NO relee `.env` — las variables de entorno quedan fijadas cuando el contenedor se *crea*. Para que un cambio en `.env` tome efecto hace falta `docker compose up -d --force-recreate` (o `up -d` sin más, que igual recrea si detecta cambios). Agregado a "Comandos de referencia" (§8).
 
 ---
 
-### Fase 7 — Frontend básico ⚠️ parcial
+### Fase 7 — Frontend básico ✅ (Chrome desktop) — Chrome móvil pendiente
 
 > **Decisión tomada al arrancar la fase (preguntada al usuario):** el plan original decía "no es TDD en el sentido de pytest". Se ofrecieron 2 caminos — agregar Playwright para TDD real de browser, o tests de estructura/contenido vía pytest + QA manual — y se eligió la segunda por costo de recursos (Playwright es pesado, y esta PC ya mostró límites con Ollama).
 
 **Tests con TDD estricto (`tests/frontend/test_frontend_structure.py`, 7 tests, uno a la vez con rojo confirmado):** botón de grabar existe, `index.html` carga `app.js`, tiene meta viewport, tiene áreas de transcripción/respuesta y reproductor de audio, `app.js` usa `getUserMedia`/`MediaRecorder`, `app.js` llama a los 3 endpoints de sesión. Esto valida estructura y contenido, **no comportamiento real en el navegador**.
 
-**Verificación manual con Claude en Chrome (desktop):**
-- ✅ La página carga sin errores de consola, con los estilos aplicados
-- ✅ El botón dispara `getUserMedia` correctamente (confirmado con JS directo: la promesa queda pendiente esperando el diálogo nativo de permiso de micrófono — es decir, el código funciona, no hay bug)
-- ⛔ **No se pudo verificar el flujo completo con audio real**: el diálogo de permiso de micrófono es UI nativa del navegador, fuera del DOM de la página — ninguna herramienta de automatización remota puede aprobarlo. Necesita un humano con micrófono real.
-- ⚠️ Chrome móvil: no verificado (no hay un teléfono físico disponible acá). El CSS usa `max-width: 500px` centrado, sin elementos de ancho fijo que puedan desbordar, así que el layout debería andar bien — pero es una inferencia, no una verificación.
+**Verificación manual — Chrome desktop:**
+- ✅ La página carga sin errores de consola, con los estilos aplicados (Claude en Chrome)
+- ✅ El botón dispara `getUserMedia` correctamente
+- ✅ **Ciclo completo confirmado por el usuario con micrófono real**: grabar → transcribir → corrección del tutor (DeepSeek) → audio de respuesta (Kokoro) — funciona de punta a punta
+- ⚠️ Chrome móvil: no verificado todavía (no hay un teléfono físico disponible para probarlo desde acá). El CSS usa `max-width: 500px` centrado, sin elementos de ancho fijo que puedan desbordar, así que el layout debería andar bien — pero sigue siendo una inferencia hasta que se pruebe en el teléfono real.
 
 **Implementación:** `frontend/index.html`, `frontend/app.js` (Web Audio API + MediaRecorder + fetch a `/transcribe /tutor /speak` encadenados), `frontend/styles.css`.
 
 > **Bug real encontrado por el usuario probando a mano (grabación funcionó, pero el reproductor de audio del tutor no):** faltaba `DEEPSEEK_API_KEY` en `.env`, y esa falla se caía como **500 sin manejar** — el `@app.exception_handler(ProviderUnavailableError)` de Fase 6 no cubría `EnvironmentError` (la excepción que lanza `require()` en `config.py`). Además `app.js` nunca revisaba `response.ok`, así que el error quedaba invisible en pantalla en vez de mostrarse. Corregido con TDD (rojo confirmado reproduciendo el bug exacto de los logs, luego verde): agregado `@app.exception_handler(EnvironmentError)` en `main.py`, y `app.js` ahora muestra `Error: <mensaje>` en el status cuando cualquier paso de la cadena falla. Confirmado contra el servidor real: `POST /api/tutor` sin key ahora devuelve `503 {"detail": "DEEPSEEK_API_KEY no está configurada..."}` en vez de un 500 críptico. 92/92 tests.
 
-**DoD (criterio literal de `BACKLOG.md`: "funciona en Chrome desktop y Chrome móvil"):** ⚠️ **Parcial.** Grabación + transcripción confirmadas por el usuario en Chrome desktop. Falta: agregar `DEEPSEEK_API_KEY` real para poder probar el ciclo completo (tutor + audio de respuesta), y probar desde el celular por WiFi.
+**DoD (criterio literal de `BACKLOG.md`: "funciona en Chrome desktop y Chrome móvil"):** ✅ Chrome desktop confirmado de punta a punta con micrófono real y providers reales (DeepSeek + Kokoro). ⚠️ Chrome móvil sigue sin probarse — no bloquea el resto del plan, queda anotado como pendiente.
 
 ---
 
@@ -305,9 +307,10 @@ Integra nuclear stress + chunk del día + conversación libre en un solo flujo d
 # Desde C:\dev\speakwise
 
 docker compose up -d                              # levantar el entorno
-docker compose exec speakwise python -m pytest -v            # correr toda la suite
+docker compose up -d --force-recreate speakwise   # aplicar cambios en .env (restart NO alcanza)
+docker compose exec speakwise python -m pytest -v            # correr toda la suite (integration excluidos por default)
 docker compose exec speakwise python -m pytest -v -k seed     # correr un subset
-docker compose exec speakwise python -m pytest -v -m integration   # test de integración real (gasta API)
+docker compose exec speakwise python -m pytest -v -m integration   # tests de integración real (gasta API)
 docker compose logs -f                              # logs en vivo
 ```
 

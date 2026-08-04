@@ -49,9 +49,9 @@ ITER-5: Auto-ajuste  │             │                   │
 - [x] **session.py** — POST /transcribe + /tutor + /speak
   - DoD: ciclo completo audio → texto → Claude → TTS en < 10 seg
 
-- [ ] **Frontend básico** — index.html + app.js + grabación de audio
+- [x] **Frontend básico** — index.html + app.js + grabación de audio
   - DoD: funciona en Chrome desktop y Chrome móvil
-  - Estado: código completo y verificado por estructura (7/7 tests). Carga sin errores en Chrome desktop, `getUserMedia`/`MediaRecorder` se disparan correctamente. **Falta**: confirmar a mano que grabar+reproducir funciona con micrófono real (el permiso del navegador no se puede aprobar por automatización) y probar en el celular por WiFi.
+  - Estado: confirmado por el usuario en Chrome desktop — grabación, transcripción, respuesta del tutor (DeepSeek) y audio de respuesta (Kokoro) funcionan de punta a punta. **Falta solo**: probar en el celular por WiFi (no bloquea Chrome desktop).
 
 - [ ] **PWA básica** — manifest.json + service-worker.js
   - DoD: instalable en iPhone y Android desde Chrome
