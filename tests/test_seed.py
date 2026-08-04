@@ -72,3 +72,45 @@ def test_lfc_focus_is_the_primary_stressed_vowel() -> None:
 
     assert lfc_focus == "AO1"
     assert stress_syl == 0
+
+
+def test_be_chunks_are_grammatical(tmp_path) -> None:
+    """El template genérico produce "I be this every day." para el verbo
+    irregular "be" — no es gramatical y el usuario reportó que no sabía qué
+    decir por falta de contexto. "be" necesita chunks curados a mano."""
+    db_path = str(tmp_path / "seed_test.db")
+    seed.run(db_path)
+    with db_connection(db_path) as conn:
+        rows = conn.execute(
+            "SELECT chunk FROM chunks c JOIN words w ON w.id = c.word_id "
+            "WHERE w.lemma = 'be'"
+        ).fetchall()
+    chunks = [r["chunk"] for r in rows]
+    assert not any(c.startswith("I be ") for c in chunks), chunks
+    assert not any(c.startswith("I'm being it") for c in chunks), chunks
+    assert not any(c == "Yesterday I was it." for c in chunks), chunks
+
+
+def test_reseeding_an_already_seeded_db_does_not_duplicate_overridden_chunks(tmp_path) -> None:
+    """Re-seedear una DB que ya tiene el chunk viejo (creado antes de que
+    existiera IRREGULAR_CHUNKS, con function="habit") no debe dejarlo
+    huérfano junto al nuevo — debe reemplazarlo, no duplicarlo. Reproduce
+    el estado real que tenía la DB del usuario."""
+    db_path = str(tmp_path / "seed_test.db")
+    seed.run(db_path)
+    with db_connection(db_path) as conn:
+        conn.execute(
+            "UPDATE chunks SET chunk = 'I be this every day.', function = 'habit' "
+            "WHERE word_id = (SELECT id FROM words WHERE lemma = 'be') AND tense = 'base'"
+        )
+        conn.commit()
+
+    seed.run(db_path)
+
+    with db_connection(db_path) as conn:
+        rows = conn.execute(
+            "SELECT chunk FROM chunks c JOIN words w ON w.id = c.word_id "
+            "WHERE w.lemma = 'be' AND c.tense = 'base'"
+        ).fetchall()
+    assert len(rows) == 1, [r["chunk"] for r in rows]
+    assert rows[0]["chunk"] == "Be careful with that."

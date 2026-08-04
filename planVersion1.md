@@ -302,6 +302,21 @@ El usuario planteó una preocupación válida: construir 2 módulos de UI nuevos
 
 Suite completa: 121/121.
 
+---
+
+### Fase 9.1 — 4 bugs reales de la primera sesión completa con micrófono real ✅
+
+El usuario probó la sesión de punta a punta con micrófono real (primera vez que EVAL-06 se ejerce completo) y reportó 4 problemas concretos. Corregidos uno por uno con TDD estricto (red confirmado antes de implementar cada uno):
+
+1. **"El Grabar-parar no es intuitivo"** — los botones no dejaban claro si estaban grabando o no. Arreglado: texto e ícono del botón cambian según el estado (🔴 "Grabando..." deshabilitado en módulos 1/2 con auto-stop; "⏹️ Detener" en módulo 3). Test: `test_app_js_gives_clear_recording_state_feedback`.
+2. **"Siempre debe dar el feedback en inglés"** — el tutor mezclaba español en las correcciones. Arreglado: instrucción explícita en `BASE_SYSTEM_PROMPT` (`services/tutor.py`) — "respondé siempre en inglés, nunca en español". Test: `test_tutor_system_prompt_requires_english_only_replies`.
+3. **"En la tercera parte debe mostrar palabras para usar como sugerencia (me quedo en blanco)"** — módulo 3 (conversación libre) no mostraba ningún apoyo léxico. Arreglado: panel `#word-suggestions` en `index.html`, poblado en `startSession()` desde `todaysPlan.week_words` (dato que ya se traía pero no se usaba). No es el panel completo de apoyo adaptativo (eso es ITER-4) — solo una lista simple para no bloquear la conversación. Test: `test_index_html_has_word_suggestions_panel_in_module_3`.
+4. **"En la parte dos, el ejemplo no da contexto, no sé qué decir"** (el chunk de "be": `"I be this every day."`) — confirmado el hallazgo ya anotado en Fase 8: el template genérico de `seed.py` asume verbos de acción con objeto directo, pero "be" es cópula y no encaja en ningún template (`"I be this every day"`, `"I'm being it right now"`, `"Yesterday I was it"` — los 4 tenses salían mal). Arreglado con `IRREGULAR_CHUNKS` en `backend/seed.py`: chunks curados a mano por tense para "be" (`"Be careful with that."`, `"She is happy today."`, `"I'm being careful with this."`, `"Yesterday I was tired."`), con contexto claro de uso. `seed_chunks()` ahora actualiza (`UPDATE`) chunks existentes en vez de solo insertar-si-falta, para que un re-seed corrija datos ya poblados. Test nuevo: `tests/test_seed.py::test_be_chunks_are_grammatical`.
+
+**Bug de infraestructura encontrado de paso, no reportado por el usuario pero real:** `pyproject.toml` no está en bind-mount (a diferencia de `backend/`, `frontend/`, `tests/`, `corpus/`) — sus cambios solo aplican con rebuild de imagen. El fix de Fase 6 al `addopts = "-m 'not integration'"` (para no gastar créditos de API en cada run de tests) nunca llegó a la imagen corriendo — quedó solo en el host. Confirmado corriendo la suite completa sin filtro, que gastó una llamada real a DeepSeek. Corregido con `docker compose build` + recreate.
+
+Suite completa tras los 4 fixes: 120/120 (nuevo test de seed sumado).
+
 **Tests primero:**
 - `tests/routers/test_session.py` (extensión) — flujo completo simulado de sesión (múltiples turnos) no deja la DB en estado inconsistente; sesión se puede recuperar completa al final
 

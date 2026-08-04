@@ -37,6 +37,21 @@ async def test_tutor_system_prompt_includes_todays_chunk(seeded_db_path: str) ->
 
 
 @pytest.mark.asyncio
+async def test_tutor_system_prompt_requires_english_only_replies(seeded_db_path: str) -> None:
+    """El tutor mezclaba español en las respuestas — reportado probando la
+    sesión completa, contradice el objetivo de práctica de inglés."""
+    llm = _CapturingLLM()
+    with db_connection(seeded_db_path) as conn:
+        await get_tutor_reply(
+            conn, llm,
+            text="hello", history=[], session_id=None, topic="", wpm=0.0, fillers=0,
+        )
+
+    assert "inglés" in llm.last_system_prompt.lower()
+    assert "nunca" in llm.last_system_prompt.lower() or "solo" in llm.last_system_prompt.lower()
+
+
+@pytest.mark.asyncio
 async def test_tutor_system_prompt_includes_todays_word_forms(seeded_db_path: str) -> None:
     llm = _CapturingLLM()
     with db_connection(seeded_db_path) as conn:

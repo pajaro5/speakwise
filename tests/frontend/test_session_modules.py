@@ -45,3 +45,19 @@ def test_app_js_calls_log_endpoint() -> None:
 def test_app_js_tutor_call_includes_session_id() -> None:
     js = _read("app.js")
     assert "sessionId" in js
+
+
+def test_index_html_has_word_suggestions_panel_in_module_3() -> None:
+    """Panel de apoyo léxico — reportado por el usuario ("me quedo en blanco",
+    problema #1 del PRD). No es el panel completo de ITER-4, solo una lista
+    simple de palabras sugeridas para no bloquear la conversación."""
+    html = _read("index.html")
+    assert 'id="word-suggestions"' in html
+
+
+def test_app_js_gives_clear_recording_state_feedback() -> None:
+    """El estado de grabación tiene que ser obvio — bug real reportado por el
+    usuario ("el Grabar-parar no es intuitivo")."""
+    js = _read("app.js")
+    assert "disabled = true" in js
+    assert "disabled = false" in js

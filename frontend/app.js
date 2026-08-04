@@ -20,6 +20,7 @@ const chunkFeedbackEl = document.getElementById("chunk-feedback");
 const nextToModule3Btn = document.getElementById("next-to-module-3-btn");
 
 const module3El = document.getElementById("module-3");
+const wordSuggestionsEl = document.getElementById("word-suggestions");
 const recordBtn = document.getElementById("record-btn");
 const transcriptEl = document.getElementById("transcript");
 const tutorReplyEl = document.getElementById("tutor-reply");
@@ -99,6 +100,8 @@ async function startSession() {
     chunkTextEl.textContent = chunk.chunk;
     chunkFunctionEl.textContent = chunk.function;
   }
+  const words = todaysPlan.week_words || [];
+  wordSuggestionsEl.textContent = words.map((w) => w.form).join(", ");
 
   startScreenEl.classList.add("hidden");
   statusEl.textContent = "";
@@ -106,6 +109,16 @@ async function startSession() {
 }
 
 const AUTO_STOP_MS = { pattern: 4000, chunk: 5000 };
+const BUTTON_FOR_MODE = {
+  pattern: practicePatternBtn,
+  chunk: recordChunkBtn,
+  free: recordBtn,
+};
+const IDLE_LABEL = {
+  pattern: "🎙️ Grabar mi intento",
+  chunk: "🎙️ Usarlo en una oración",
+  free: "🎙️ Grabar",
+};
 
 async function startRecording(mode) {
   if (!navigator.mediaDevices) {
@@ -121,6 +134,14 @@ async function startRecording(mode) {
   mediaRecorder.onstop = handleRecordingStop;
   mediaRecorder.start();
   recording = true;
+
+  const btn = BUTTON_FOR_MODE[mode];
+  if (mode === "free") {
+    btn.textContent = "⏹️ Detener (tocá para parar)";
+  } else {
+    btn.disabled = true;
+    btn.textContent = "🔴 Grabando... (se detiene solo)";
+  }
   statusEl.textContent = "Grabando...";
 
   if (AUTO_STOP_MS[mode]) {
@@ -133,6 +154,9 @@ async function startRecording(mode) {
 function stopRecording() {
   mediaRecorder.stop();
   recording = false;
+  const btn = BUTTON_FOR_MODE[recordingMode];
+  btn.disabled = false;
+  btn.textContent = IDLE_LABEL[recordingMode];
 }
 
 async function handleRecordingStop() {

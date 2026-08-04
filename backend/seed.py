@@ -18,6 +18,18 @@ CHUNK_TEMPLATES = {
     "past": ("Yesterday I {form} it.", "past_narration"),
 }
 
+# El verbo "be" es cópula (no toma objeto directo como "it"/"this"), así que
+# los templates genéricos de arriba producen frases no gramaticales (p. ej.
+# "I be this every day."). Se curan a mano por tense.
+IRREGULAR_CHUNKS = {
+    "be": {
+        "base": ("Be careful with that.", "imperative"),
+        "third_sg": ("She is happy today.", "habit_third_person"),
+        "progressive": ("I'm being careful with this.", "present_action"),
+        "past": ("Yesterday I was tired.", "past_narration"),
+    },
+}
+
 _cmu = cmudict.dict()
 
 
@@ -111,14 +123,22 @@ def seed_chunks(conn: sqlite3.Connection, rows: list[dict]) -> None:
             "SELECT id FROM words WHERE lemma = ?", (row["lemma"],)
         ).fetchone()
         word_id = word["id"]
+        overrides = IRREGULAR_CHUNKS.get(row["lemma"], {})
         for tense, (template, function) in CHUNK_TEMPLATES.items():
+            if tense in overrides:
+                chunk_text, function = overrides[tense]
+            else:
+                chunk_text = template.format(form=row[tense])
             existing = conn.execute(
-                "SELECT id FROM chunks WHERE word_id = ? AND tense = ? AND function = ?",
-                (word_id, tense, function),
+                "SELECT id FROM chunks WHERE word_id = ? AND tense = ?",
+                (word_id, tense),
             ).fetchone()
             if existing:
+                conn.execute(
+                    "UPDATE chunks SET chunk = ?, function = ? WHERE id = ?",
+                    (chunk_text, function, existing["id"]),
+                )
                 continue
-            chunk_text = template.format(form=row[tense])
             conn.execute(
                 "INSERT INTO chunks (word_id, chunk, tense, function, level) "
                 "VALUES (?, ?, ?, ?, ?)",
