@@ -247,7 +247,9 @@ Orden pensado para respetar la dirección de dependencias de `CODING_STANDARDS.m
 
 **Implementación:** `frontend/index.html`, `frontend/app.js` (Web Audio API + MediaRecorder + fetch a `/transcribe /tutor /speak` encadenados), `frontend/styles.css`.
 
-**DoD (criterio literal de `BACKLOG.md`: "funciona en Chrome desktop y Chrome móvil"):** ⚠️ **NO completamente verificado.** Falta que el usuario confirme a mano: grabar+reproducir con micrófono real en PC, y probar desde el celular por WiFi (`http://<IP-LAN>:8000`, firewall ya configurado desde Fase 0).
+> **Bug real encontrado por el usuario probando a mano (grabación funcionó, pero el reproductor de audio del tutor no):** faltaba `DEEPSEEK_API_KEY` en `.env`, y esa falla se caía como **500 sin manejar** — el `@app.exception_handler(ProviderUnavailableError)` de Fase 6 no cubría `EnvironmentError` (la excepción que lanza `require()` en `config.py`). Además `app.js` nunca revisaba `response.ok`, así que el error quedaba invisible en pantalla en vez de mostrarse. Corregido con TDD (rojo confirmado reproduciendo el bug exacto de los logs, luego verde): agregado `@app.exception_handler(EnvironmentError)` en `main.py`, y `app.js` ahora muestra `Error: <mensaje>` en el status cuando cualquier paso de la cadena falla. Confirmado contra el servidor real: `POST /api/tutor` sin key ahora devuelve `503 {"detail": "DEEPSEEK_API_KEY no está configurada..."}` en vez de un 500 críptico. 92/92 tests.
+
+**DoD (criterio literal de `BACKLOG.md`: "funciona en Chrome desktop y Chrome móvil"):** ⚠️ **Parcial.** Grabación + transcripción confirmadas por el usuario en Chrome desktop. Falta: agregar `DEEPSEEK_API_KEY` real para poder probar el ciclo completo (tutor + audio de respuesta), y probar desde el celular por WiFi.
 
 ---
 

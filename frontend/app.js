@@ -30,30 +30,41 @@ function stopRecording() {
 
 async function handleRecordingStop() {
   const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
-  statusEl.textContent = "Transcribiendo...";
+  try {
+    statusEl.textContent = "Transcribiendo...";
+    const transcript = await transcribeAudio(audioBlob);
+    transcriptEl.textContent = transcript.text;
 
-  const transcript = await transcribeAudio(audioBlob);
-  transcriptEl.textContent = transcript.text;
+    statusEl.textContent = "Pensando...";
+    const tutor = await askTutor(transcript.text, transcript.wpm, transcript.fillers);
+    tutorReplyEl.textContent = tutor.reply;
+    sessionId = tutor.session_id;
+    history.push({ role: "user", content: transcript.text });
+    history.push({ role: "assistant", content: tutor.reply });
 
-  statusEl.textContent = "Pensando...";
-  const tutor = await askTutor(transcript.text, transcript.wpm, transcript.fillers);
-  tutorReplyEl.textContent = tutor.reply;
-  sessionId = tutor.session_id;
-  history.push({ role: "user", content: transcript.text });
-  history.push({ role: "assistant", content: tutor.reply });
+    statusEl.textContent = "Generando audio...";
+    const audioUrl = await speak(tutor.reply);
+    tutorAudioEl.src = audioUrl;
+    tutorAudioEl.play();
+    statusEl.textContent = "Listo.";
+  } catch (error) {
+    statusEl.textContent = `Error: ${error.message}`;
+  }
+}
 
-  statusEl.textContent = "Generando audio...";
-  const audioUrl = await speak(tutor.reply);
-  tutorAudioEl.src = audioUrl;
-  tutorAudioEl.play();
-  statusEl.textContent = "Listo.";
+async function parseJsonOrThrow(response) {
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.detail || `${response.status} ${response.statusText}`);
+  }
+  return response.json();
 }
 
 async function transcribeAudio(audioBlob) {
   const formData = new FormData();
   formData.append("audio", audioBlob, "audio.webm");
   const response = await fetch("/api/transcribe", { method: "POST", body: formData });
-  return response.json();
+  return parseJsonOrThrow(response);
 }
 
 async function askTutor(text, wpm, fillers) {
@@ -62,7 +73,7 @@ async function askTutor(text, wpm, fillers) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text, history, session_id: sessionId, wpm, fillers }),
   });
-  return response.json();
+  return parseJsonOrThrow(response);
 }
 
 async function speak(text) {
@@ -71,6 +82,10 @@ async function speak(text) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text }),
   });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.detail || `${response.status} ${response.statusText}`);
+  }
   const audioBlob = await response.blob();
   return URL.createObjectURL(audioBlob);
 }

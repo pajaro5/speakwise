@@ -21,6 +21,14 @@ async def provider_unavailable_handler(
     return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 
+@app.exception_handler(EnvironmentError)
+async def config_missing_handler(request: Request, exc: EnvironmentError) -> JSONResponse:
+    # require() en config.py lanza EnvironmentError cuando falta una API key —
+    # sin este handler el error queda como 500 sin manejar (bug real encontrado
+    # probando /tutor a mano sin DEEPSEEK_API_KEY configurada).
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
 app.include_router(session.router)
 app.include_router(progress.router)
 

@@ -140,6 +140,23 @@ def test_tutor_returns_503_when_llm_provider_down(client) -> None:
     assert "no disponible" in response.json()["detail"]
 
 
+def test_tutor_returns_clean_error_when_api_key_missing(client) -> None:
+    test_client, _ = client
+
+    def _broken_get_llm_provider():
+        raise EnvironmentError(
+            "DEEPSEEK_API_KEY no está configurada en .env — necesaria para el "
+            "provider seleccionado."
+        )
+
+    app.dependency_overrides[session_router.get_llm_provider] = _broken_get_llm_provider
+
+    response = test_client.post("/api/tutor", json={"text": "hola"})
+
+    assert response.status_code == 503
+    assert "DEEPSEEK_API_KEY" in response.json()["detail"]
+
+
 def test_transcribe_returns_503_when_stt_provider_down(client) -> None:
     test_client, _ = client
 

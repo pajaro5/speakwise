@@ -44,3 +44,8 @@ def test_app_js_calls_the_three_session_endpoints() -> None:
     assert '"/api/transcribe"' in js
     assert '"/api/tutor"' in js
     assert '"/api/speak"' in js
+
+
+def test_app_js_checks_response_ok_before_using_it() -> None:
+    js = _read("app.js")
+    assert "response.ok" in js
