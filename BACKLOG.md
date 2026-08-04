@@ -46,7 +46,7 @@ ITER-5: Auto-ajuste  │             │                   │
 - [x] **curriculum.py** — GET /api/today con las 3 queries básicas
   - DoD: EVAL-02 pasa
 
-- [ ] **session.py** — POST /transcribe + /tutor + /speak
+- [x] **session.py** — POST /transcribe + /tutor + /speak
   - DoD: ciclo completo audio → texto → Claude → TTS en < 10 seg
 
 - [ ] **Frontend básico** — index.html + app.js + grabación de audio

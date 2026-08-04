@@ -1,7 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from backend.routers import progress
+from backend.routers import progress, session
+from backend.services.exceptions import ProviderUnavailableError
 
 app = FastAPI(title="SpeakWise", version="1.0.0")
 
@@ -12,6 +14,14 @@ async def health():
     return {"status": "ok", "version": "1.0.0"}
 
 
+@app.exception_handler(ProviderUnavailableError)
+async def provider_unavailable_handler(
+    request: Request, exc: ProviderUnavailableError
+) -> JSONResponse:
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
+app.include_router(session.router)
 app.include_router(progress.router)
 
 # Servir el frontend estático — va al final: es un catch-all en "/"

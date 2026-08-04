@@ -138,3 +138,39 @@ def db_connection(db_path: str | None = None) -> Iterator[sqlite3.Connection]:
 def get_db() -> Generator[sqlite3.Connection, None, None]:
     with db_connection() as conn:
         yield conn
+
+
+def create_session(
+    conn: sqlite3.Connection,
+    *,
+    date: str,
+    topic: str,
+    transcript: str,
+    wpm: float,
+    fillers: int,
+    feedback: str,
+) -> int:
+    cur = conn.execute(
+        "INSERT INTO sessions (date, topic, transcript, wpm, fillers, feedback) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (date, topic, transcript, wpm, fillers, feedback),
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
+def update_session(
+    conn: sqlite3.Connection,
+    session_id: int,
+    *,
+    transcript: str,
+    wpm: float,
+    fillers: int,
+    feedback: str,
+) -> None:
+    conn.execute(
+        "UPDATE sessions SET transcript = ?, wpm = ?, fillers = ?, feedback = ? "
+        "WHERE id = ?",
+        (transcript, wpm, fillers, feedback, session_id),
+    )
+    conn.commit()

@@ -253,6 +253,39 @@ CREATE INDEX idx_pattern_stage    ON pattern_progress(stage, accuracy);
 }
 ```
 
+### POST /api/tutor
+
+*(Contrato definido en Fase 6 de `planVersion1.md` — no estaba especificado con ejemplo.)*
+
+```json
+// Request
+{
+  "text": "I go to work yesterday",
+  "history": [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}],
+  "session_id": null,
+  "topic": "tu semana de trabajo",
+  "wpm": 85.5,
+  "fillers": 1
+}
+
+// Response
+{
+  "reply": "Try 'I went to work yesterday' instead — 'go' becomes 'went' in the past.",
+  "session_id": 42
+}
+```
+
+`session_id: null` crea una sesión nueva; pasar el `session_id` devuelto actualiza esa misma fila en `sessions` en vez de crear una nueva. `wpm`/`fillers` vienen del response de `/api/transcribe` del mismo turno.
+
+### POST /api/speak
+
+```json
+// Request
+{"text": "Great job!", "voice": "default"}
+
+// Response: audio/mpeg (bytes), no JSON
+```
+
 ### GET /api/today
 
 ```json
@@ -392,3 +425,4 @@ class LLMProvider(ABC):
 | 1.3 | Ago 2026 | Fase 2 de planVersion1.md: eliminado `chunks.csv` del árbol (se generan en `seed.py`), aclarado que fonemas ARPAbet se derivan de `cmudict`, no se hand-authoring en CSV |
 | 1.4 | Ago 2026 | Fase 3 de planVersion1.md: providers locales/libres (`whisperx_local`, `kokoro`, `ollama_qwen`) pasan a ser el default en MVP, no V2 — decisión explícita del usuario ("todo en lo posible sea con software libre"). Agregado `llm_deepseek.py` como alternativa paga más económica que Claude cuando se necesite un servicio contratado. |
 | 1.5 | Ago 2026 | Ollama+Qwen removido de `docker-compose.yml` y como default de LLM — la PC de desarrollo no soporta correr un modelo de 7B. Nuevo default de LLM: DeepSeek (paga, más económica). El provider `llm_ollama.py` queda en el código, disponible por env var para uso futuro en otra máquina. |
+| 1.6 | Ago 2026 | Fase 6 de planVersion1.md: agregados contratos de `POST /api/tutor` y `POST /api/speak` (no estaban especificados con ejemplo). `session_id` en `/tutor` decide crear vs actualizar la fila de `sessions`. |

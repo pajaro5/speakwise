@@ -205,21 +205,31 @@ Orden pensado para respetar la dirección de dependencias de `CODING_STANDARDS.m
 
 ---
 
-### Fase 6 — `session.py`: `/transcribe /tutor /speak`
+### Fase 6 — `session.py`: `/transcribe /tutor /speak` ✅
 
-**Tests primero:**
-- `tests/routers/test_session.py`:
-  - `POST /api/transcribe` con audio de prueba → 200 + contrato JSON de `DESIGN.md` §5 (versión MVP, sin `stress_results`/`phoneme_errors`)
-  - `POST /api/tutor` con transcripción + historial → 200 + respuesta de Claude (mockeado)
-  - `POST /api/speak` con texto → 200 + `audio/*` stream
-  - ciclo completo encadenado (fixture que simula audio → texto → Claude → TTS) en < 10s con providers mockeados con latencias realistas
-  - inputs inválidos → 422 con mensaje útil (qué falló + por qué), nunca excepción sin capturar
+> **Esta fase se hizo con TDD estricto** (pedido explícito del usuario): un test a la vez, corrido para confirmar rojo antes de escribir la implementación mínima, verde, siguiente test. 9 incrementos — algunos sí mostraron rojo real (endpoint/dependencia no existía, excepción sin manejar); otros pasaron directo porque una implementación ya escrita cubría el siguiente caso (ej. FastAPI valida `File(...)` requerido solo, o la persistencia ya cubría el test de "no duplica sesión"). Eso también es TDD válido — el test queda como guardia de regresión igual.
 
-**Implementación:** `routers/session.py` (máx. 5 líneas por handler, sin lógica de negocio — según `CODING_STANDARDS.md` §5).
+**Decisiones de diseño tomadas al implementar (`DESIGN.md` no las especificaba):**
+- Contratos de `/tutor` y `/speak` (no tenían ejemplo JSON en `DESIGN.md` §5) — documentados ahí ahora.
+- Persistencia de sesión: `/tutor` crea una fila en `sessions` si no le pasan `session_id`, o actualiza esa fila si sí — sin esto no había forma de cumplir "sesión persistida" sin inventar endpoints `/session/start` y `/session/end` que `DESIGN.md` no define.
+- Manejo de errores: un `@app.exception_handler(ProviderUnavailableError)` global en `main.py` en vez de `try/except` repetido en cada handler — cumple "los routers convierten excepciones de dominio a HTTP" (`CODING_STANDARDS.md` §8) sin romper el límite de 5 líneas por handler (`CODING_STANDARDS.md` §5).
 
-**DoD (= DoD de "Sesión completa" en `DEFINITION-OF-DONE.md`):** ciclo audio → `/transcribe` → `/tutor` → `/speak` en < 10s, sesión persistida en SQLite (`sessions` table).
+**Tests (`tests/routers/test_session.py`, 9 tests, TDD estricto):**
+1. `POST /api/transcribe` → 200 + contrato JSON MVP de `DESIGN.md` §5
+2. sin audio → 422 (gratis de FastAPI/Pydantic)
+3. `POST /api/speak` → 200 + bytes de audio
+4. `POST /api/tutor` → 200 + `{reply, session_id}`
+5. la sesión queda persistida en `sessions` (verificado con `SELECT` real, no solo el response)
+6. reusar `session_id` actualiza, no duplica
+7. LLM caído → 503 con mensaje útil (no 500 sin manejar)
+8. mismo exception handler cubre `/transcribe` (verificado explícitamente)
+9. ciclo completo `/transcribe` → `/tutor` → `/speak` encadenado, con latencias simuladas realistas (2s+3s+1s), termina en < 10s
 
-> **Checkpoint:** a partir de acá conviene correr una vez el test de integración real (`@pytest.mark.integration`) con las API keys puestas, para confirmar que el contrato mockeado coincide con la API real antes de seguir.
+**Implementación:** `routers/session.py` (handlers ≤5 líneas), `services/tutor.py` (arma el system prompt, llama al LLM, persiste), `database.py` +`create_session`/`update_session`, `main.py` +exception handler global.
+
+**DoD (= DoD de "Sesión completa" en `DEFINITION-OF-DONE.md`):** ✅ ciclo audio → `/transcribe` → `/tutor` → `/speak` en < 10s (real: ~6s con latencias simuladas), sesión persistida en SQLite. Suite completa: 83/83.
+
+> **Checkpoint pendiente:** correr el test de integración real (`@pytest.mark.integration`) con las API keys puestas (DeepSeek, y STT/TTS locales que no necesitan key) para confirmar que el contrato mockeado coincide con la API real. No se hizo todavía — las keys siguen sin completar en `.env`.
 
 ---
 
