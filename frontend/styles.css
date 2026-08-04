@@ -1,0 +1,45 @@
+body {
+  font-family: system-ui, sans-serif;
+  max-width: 500px;
+  margin: 60px auto;
+  padding: 0 16px;
+  text-align: center;
+  color: #1e293b;
+}
+
+h1 {
+  color: #2563eb;
+  font-size: 2rem;
+}
+
+#record-btn {
+  font-size: 1.2rem;
+  padding: 12px 32px;
+  border-radius: 999px;
+  border: none;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+}
+
+#record-btn:active {
+  background: #1d4ed8;
+}
+
+#status {
+  color: #64748b;
+  font-style: italic;
+}
+
+#transcript, #tutor-reply {
+  text-align: left;
+  background: #f1f5f9;
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 12px;
+}
+
+#tutor-audio {
+  width: 100%;
+  margin-top: 12px;
+}

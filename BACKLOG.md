@@ -51,6 +51,7 @@ ITER-5: Auto-ajuste  │             │                   │
 
 - [ ] **Frontend básico** — index.html + app.js + grabación de audio
   - DoD: funciona en Chrome desktop y Chrome móvil
+  - Estado: código completo y verificado por estructura (7/7 tests). Carga sin errores en Chrome desktop, `getUserMedia`/`MediaRecorder` se disparan correctamente. **Falta**: confirmar a mano que grabar+reproducir funciona con micrófono real (el permiso del navegador no se puede aprobar por automatización) y probar en el celular por WiFi.
 
 - [ ] **PWA básica** — manifest.json + service-worker.js
   - DoD: instalable en iPhone y Android desde Chrome

@@ -233,14 +233,21 @@ Orden pensado para respetar la dirección de dependencias de `CODING_STANDARDS.m
 
 ---
 
-### Fase 7 — Frontend básico
+### Fase 7 — Frontend básico ⚠️ parcial
 
-**No es TDD en el sentido de pytest** (no hay backend que testear), pero sí verificación explícita:
+> **Decisión tomada al arrancar la fase (preguntada al usuario):** el plan original decía "no es TDD en el sentido de pytest". Se ofrecieron 2 caminos — agregar Playwright para TDD real de browser, o tests de estructura/contenido vía pytest + QA manual — y se eligió la segunda por costo de recursos (Playwright es pesado, y esta PC ya mostró límites con Ollama).
 
-- `frontend/index.html`, `frontend/app.js` (grabación de audio con Web Audio API), `frontend/styles.css`
-- **Verificación manual documentada** (no automatizable sin herramientas de e2e que no están en el stack): abrir en Chrome desktop y Chrome móvil (vía `http://<IP-LAN>:8000`, firewall ya configurado), grabar y reproducir un turno completo
+**Tests con TDD estricto (`tests/frontend/test_frontend_structure.py`, 7 tests, uno a la vez con rojo confirmado):** botón de grabar existe, `index.html` carga `app.js`, tiene meta viewport, tiene áreas de transcripción/respuesta y reproductor de audio, `app.js` usa `getUserMedia`/`MediaRecorder`, `app.js` llama a los 3 endpoints de sesión. Esto valida estructura y contenido, **no comportamiento real en el navegador**.
 
-**DoD:** funciona en Chrome desktop y Chrome móvil (criterio literal de `BACKLOG.md`).
+**Verificación manual con Claude en Chrome (desktop):**
+- ✅ La página carga sin errores de consola, con los estilos aplicados
+- ✅ El botón dispara `getUserMedia` correctamente (confirmado con JS directo: la promesa queda pendiente esperando el diálogo nativo de permiso de micrófono — es decir, el código funciona, no hay bug)
+- ⛔ **No se pudo verificar el flujo completo con audio real**: el diálogo de permiso de micrófono es UI nativa del navegador, fuera del DOM de la página — ninguna herramienta de automatización remota puede aprobarlo. Necesita un humano con micrófono real.
+- ⚠️ Chrome móvil: no verificado (no hay un teléfono físico disponible acá). El CSS usa `max-width: 500px` centrado, sin elementos de ancho fijo que puedan desbordar, así que el layout debería andar bien — pero es una inferencia, no una verificación.
+
+**Implementación:** `frontend/index.html`, `frontend/app.js` (Web Audio API + MediaRecorder + fetch a `/transcribe /tutor /speak` encadenados), `frontend/styles.css`.
+
+**DoD (criterio literal de `BACKLOG.md`: "funciona en Chrome desktop y Chrome móvil"):** ⚠️ **NO completamente verificado.** Falta que el usuario confirme a mano: grabar+reproducir con micrófono real en PC, y probar desde el celular por WiFi (`http://<IP-LAN>:8000`, firewall ya configurado desde Fase 0).
 
 ---
 

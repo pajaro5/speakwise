@@ -4,16 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SpeakWise</title>
-    <style>
-        body { font-family: system-ui, sans-serif; max-width: 500px;
-               margin: 100px auto; text-align: center; color: #1e293b; }
-        h1   { color: #2563eb; font-size: 2rem; }
-        code { background: #f1f5f9; padding: 2px 8px; border-radius: 4px; }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <h1>🎙️ SpeakWise</h1>
-    <p>Servidor activo. Entorno de desarrollo listo.</p>
-    <p><code>GET /health → {"status": "ok"}</code></p>
+    <button id="record-btn">Grabar</button>
+    <p id="status"></p>
+    <p id="transcript"></p>
+    <p id="tutor-reply"></p>
+    <audio id="tutor-audio" controls></audio>
+    <script src="app.js"></script>
 </body>
 </html>
