@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
+
+from backend.routers import progress
 
 app = FastAPI(title="SpeakWise", version="1.0.0")
 
@@ -11,5 +12,7 @@ async def health():
     return {"status": "ok", "version": "1.0.0"}
 
 
-# Servir el frontend estático
+app.include_router(progress.router)
+
+# Servir el frontend estático — va al final: es un catch-all en "/"
 app.mount("/", StaticFiles(directory="frontend", html=True), name="static")

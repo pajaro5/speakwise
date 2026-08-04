@@ -43,7 +43,7 @@ ITER-5: Auto-ajuste  │             │                   │
 - [x] **acoustic.py** — Pipeline básico: Whisper API + WPM + fillers
   - DoD: WPM y fillers calculados correctamente desde timestamps de Whisper
 
-- [ ] **curriculum.py** — GET /api/today con las 3 queries básicas
+- [x] **curriculum.py** — GET /api/today con las 3 queries básicas
   - DoD: EVAL-02 pasa
 
 - [ ] **session.py** — POST /transcribe + /tutor + /speak

@@ -189,15 +189,19 @@ Orden pensado para respetar la dirección de dependencias de `CODING_STANDARDS.m
 
 ---
 
-### Fase 5 — `curriculum.py` + `GET /api/today`
+### Fase 5 — `curriculum.py` + `GET /api/today` ✅
 
-**Tests primero:**
-- `tests/services/test_curriculum.py` — las 3 queries de `DESIGN.md` §7 devuelven lo esperado con datos de seed conocidos; contexto total ≤ 300 tokens (contar con tiktoken o aproximación de palabras); `difficulty` cambia según promedio de `comprehensibility` simulado
-- `tests/routers/test_progress.py` — `GET /api/today` devuelve 200 y el JSON exacto del contrato en `DESIGN.md` §5; responde en < 500ms
+> **Decisión de diseño tomada al implementar (no estaba en `DESIGN.md`):** `user_progress`/`pattern_progress` están vacías el día 1. Las 3 queries usan `LEFT JOIN` + `COALESCE` para priorizar por `score`/`accuracy` real cuando existe, y caer a ordenar por `rank`/`priority` del corpus cuando no — así `/api/today` es útil desde la primera sesión, no solo después de acumular progreso. Documentado en `EVALS.md` EVAL-02 y `DESIGN.md`.
+>
+> **Bug real encontrado y corregido:** `sqlite3.ProgrammingError: SQLite objects created in a thread can only be used in that same thread`. FastAPI resuelve dependencias sync (`get_db`) en un thread del threadpool distinto al del handler `async def` que las consume. Fix estándar: `check_same_thread=False` en `database.py` (seguro acá porque cada request tiene su propia conexión, sin compartirla entre requests concurrentes).
+>
+> **Falso positivo descartado:** la respuesta JSON se veía con caracteres corruptos (`/ÉªdÊ/` en vez de `/ɪdʒ/`) al mirarla desde PowerShell — era `Invoke-WebRequest`/consola mostrando mal el UTF-8, no un bug real. Verificado leyendo la respuesta con Python dentro del contenedor antes de "arreglar" algo que no estaba roto.
 
-**Implementación:** `services/curriculum.py`, `routers/progress.py` (solo `/today` en esta fase — `/panel`, `/progress`, `/stats` son de iteraciones futuras, se dejan como `501 Not Implemented` explícito, no se inventan).
+**Tests (`tests/services/test_curriculum.py` + `tests/routers/test_progress.py`, 19 tests):** cold-start (sin progreso previo), exclusión de formas no vencidas, exclusión de patrones ya dominados (stage 4), prioridad por `chunk_spontaneous`, las 3 reglas de `difficulty`, contrato JSON exacto vía `TestClient`, tiempo de respuesta < 500ms con datos reales de seed, y los stubs `501` de `/panel` `/progress` `/stats`.
 
-**DoD:** **EVAL-02 pasa** (definido en `EVALS.md`, Fase 0). Este es uno de los dos evals de cierre de ITER-1.
+**Implementación:** `services/curriculum.py`, `routers/progress.py` (solo `/today` implementado — `/panel`, `/progress`, `/stats` devuelven `501 Not Implemented` explícito, son de iteraciones futuras), `main.py` monta el router antes del `StaticFiles` mount (si no, el mount en `/` captura todo primero).
+
+**DoD:** ✅ **EVAL-02 pasa** (`EVALS.md`). Verificado además contra el servidor real corriendo, no solo tests aislados. Suite completa: 74/74.
 
 ---
 

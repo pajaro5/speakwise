@@ -4,20 +4,22 @@ Cada eval tiene un criterio de pass/fail explícito. Un eval "pasa" cuando todos
 
 ---
 
-## EVAL-02 — Curriculum Engine (cierre de ITER-1)
+## EVAL-02 — Curriculum Engine (cierre de ITER-1) ✅ PASA
 
 Verifica que `GET /api/today` (`services/curriculum.py`) hace lo que promete `DESIGN.md` §7.
 
+> **Nota de implementación (Fase 5 de `planVersion1.md`):** `user_progress` y `pattern_progress` están vacías el día 1 (son tablas dinámicas, no las llena `seed.py`). Las queries usan `LEFT JOIN` + `COALESCE` para funcionar tanto en frío (sin progreso todavía, prioriza por rank/priority) como con datos reales (prioriza por score/accuracy). No estaba especificado así en `DESIGN.md` §7 — decisión tomada al implementar para que la app sea usable desde el primer día.
+
 ```
-□ Con datos de seed conocidos, "Formas a revisar" devuelve las formas con
+☑ Con datos de seed conocidos, "Formas a revisar" devuelve las formas con
   next_review <= hoy y context = conv_prod, ordenadas por score ASC, máx. 5
-□ "Patrón del día" devuelve 1 patrón con stage < 4, el de menor accuracy
-□ "Chunk del día" pertenece al top-150 palabras con menor chunk_spontaneous acumulado
-□ "Dificultad" es "increase" si AVG(comprehensibility) últimas 5 sesiones > 4.0,
+☑ "Patrón del día" devuelve 1 patrón con stage < 4, el de menor accuracy
+☑ "Chunk del día" pertenece al top-150 palabras con menor chunk_spontaneous acumulado
+☑ "Dificultad" es "increase" si AVG(comprehensibility) últimas 5 sesiones > 4.0,
   "decrease" si < 3.0, si no "maintain"
-□ El JSON de respuesta cumple exactamente el contrato de DESIGN.md §5
-□ El contenido total del corpus en la respuesta es ≤ 300 tokens
-□ Responde en < 500ms (medido con datos reales de seed, no mocks)
+☑ El JSON de respuesta cumple exactamente el contrato de DESIGN.md §5
+☑ El contenido total del corpus en la respuesta es ≤ 300 tokens (aprox. por chars/4)
+☑ Responde en < 500ms (medido con datos reales de seed, no mocks)
 ```
 
 **Pass:** los 7 checks en verde. Automatizado en `tests/services/test_curriculum.py` + `tests/routers/test_progress.py`.
