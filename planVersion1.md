@@ -235,7 +235,7 @@ Orden pensado para respetar la dirección de dependencias de `CODING_STANDARDS.m
 
 ---
 
-### Fase 7 — Frontend básico ✅ (Chrome desktop) — Chrome móvil pendiente
+### Fase 7 — Frontend básico ✅ Chrome desktop · ⚠️ Chrome móvil (grabación pendiente de flag de Chrome)
 
 > **Decisión tomada al arrancar la fase (preguntada al usuario):** el plan original decía "no es TDD en el sentido de pytest". Se ofrecieron 2 caminos — agregar Playwright para TDD real de browser, o tests de estructura/contenido vía pytest + QA manual — y se eligió la segunda por costo de recursos (Playwright es pesado, y esta PC ya mostró límites con Ollama).
 
@@ -245,13 +245,15 @@ Orden pensado para respetar la dirección de dependencias de `CODING_STANDARDS.m
 - ✅ La página carga sin errores de consola, con los estilos aplicados (Claude en Chrome)
 - ✅ El botón dispara `getUserMedia` correctamente
 - ✅ **Ciclo completo confirmado por el usuario con micrófono real**: grabar → transcribir → corrección del tutor (DeepSeek) → audio de respuesta (Kokoro) — funciona de punta a punta
-- ⚠️ Chrome móvil: no verificado todavía (no hay un teléfono físico disponible para probarlo desde acá). El CSS usa `max-width: 500px` centrado, sin elementos de ancho fijo que puedan desbordar, así que el layout debería andar bien — pero sigue siendo una inferencia hasta que se pruebe en el teléfono real.
+- ✅ **Chrome móvil probado por el usuario por WiFi**: la página carga bien (layout responsive confirmado en la práctica), pero el botón de grabar no hacía nada — ver bug 2 abajo.
 
 **Implementación:** `frontend/index.html`, `frontend/app.js` (Web Audio API + MediaRecorder + fetch a `/transcribe /tutor /speak` encadenados), `frontend/styles.css`.
 
-> **Bug real encontrado por el usuario probando a mano (grabación funcionó, pero el reproductor de audio del tutor no):** faltaba `DEEPSEEK_API_KEY` en `.env`, y esa falla se caía como **500 sin manejar** — el `@app.exception_handler(ProviderUnavailableError)` de Fase 6 no cubría `EnvironmentError` (la excepción que lanza `require()` en `config.py`). Además `app.js` nunca revisaba `response.ok`, así que el error quedaba invisible en pantalla en vez de mostrarse. Corregido con TDD (rojo confirmado reproduciendo el bug exacto de los logs, luego verde): agregado `@app.exception_handler(EnvironmentError)` en `main.py`, y `app.js` ahora muestra `Error: <mensaje>` en el status cuando cualquier paso de la cadena falla. Confirmado contra el servidor real: `POST /api/tutor` sin key ahora devuelve `503 {"detail": "DEEPSEEK_API_KEY no está configurada..."}` en vez de un 500 críptico. 92/92 tests.
+> **Bug 1 (encontrado en desktop sin API key):** faltaba `DEEPSEEK_API_KEY` en `.env`, y esa falla se caía como **500 sin manejar** — el `@app.exception_handler(ProviderUnavailableError)` de Fase 6 no cubría `EnvironmentError` (la excepción que lanza `require()` en `config.py`). Además `app.js` nunca revisaba `response.ok`. Corregido con TDD: agregado `@app.exception_handler(EnvironmentError)` en `main.py`, `app.js` ahora muestra `Error: <mensaje>` en el status. Confirmado: `POST /api/tutor` sin key ahora devuelve `503` con mensaje claro en vez de 500.
+>
+> **Bug 2 (encontrado probando en el celular por WiFi):** el botón de grabar no hacía nada, sin popup de permiso ni error visible. Causa real: `navigator.mediaDevices` **solo existe en contextos seguros** (HTTPS o `localhost`) — por WiFi se accede vía `http://192.168.1.4:8000`, un origen no seguro, así que Chrome ni siquiera expone la API (no es que el permiso se deniegue, la función no existe). El click handler tampoco tenía manejo de errores, así que el fallo quedaba invisible. Corregido con TDD: chequeo explícito de `navigator.mediaDevices` con mensaje claro en pantalla, y el click handler ahora atrapa cualquier error. **Solución real para probar sin HTTPS:** habilitar `chrome://flags/#unsafely-treat-insecure-origin-as-secure` en el celular con la IP de la PC — es una limitación de seguridad del navegador, no algo resoluble desde el servidor.
 
-**DoD (criterio literal de `BACKLOG.md`: "funciona en Chrome desktop y Chrome móvil"):** ✅ Chrome desktop confirmado de punta a punta con micrófono real y providers reales (DeepSeek + Kokoro). ⚠️ Chrome móvil sigue sin probarse — no bloquea el resto del plan, queda anotado como pendiente.
+**DoD (criterio literal de `BACKLOG.md`: "funciona en Chrome desktop y Chrome móvil"):** ✅ Chrome desktop confirmado de punta a punta con micrófono real y providers reales (DeepSeek + Kokoro). Chrome móvil: página y layout confirmados; grabación pendiente de que el usuario habilite el flag de Chrome y reintente. 95/95 tests.
 
 ---
 
