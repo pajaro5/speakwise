@@ -49,3 +49,10 @@ def test_app_js_calls_the_three_session_endpoints() -> None:
 def test_app_js_checks_response_ok_before_using_it() -> None:
     js = _read("app.js")
     assert "response.ok" in js
+
+
+def test_app_js_record_click_handler_catches_startrecording_errors() -> None:
+    js = _read("app.js")
+    assert "recordBtn.addEventListener" in js
+    click_handler = js.split("recordBtn.addEventListener")[1]
+    assert "catch" in click_handler

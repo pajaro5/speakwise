@@ -11,6 +11,11 @@ let sessionId = null;
 let history = [];
 
 async function startRecording() {
+  if (!navigator.mediaDevices) {
+    statusEl.textContent =
+      "Error: el micrófono solo funciona en HTTPS o localhost. Por WiFi (http://IP:8000) el navegador lo bloquea.";
+    return;
+  }
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   mediaRecorder = new MediaRecorder(stream);
   audioChunks = [];
@@ -90,10 +95,14 @@ async function speak(text) {
   return URL.createObjectURL(audioBlob);
 }
 
-recordBtn.addEventListener("click", () => {
-  if (recording) {
-    stopRecording();
-  } else {
-    startRecording();
+recordBtn.addEventListener("click", async () => {
+  try {
+    if (recording) {
+      stopRecording();
+    } else {
+      await startRecording();
+    }
+  } catch (error) {
+    statusEl.textContent = `Error: ${error.message}`;
   }
 });
