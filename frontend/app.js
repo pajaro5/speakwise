@@ -95,6 +95,12 @@ async function speak(text) {
   return URL.createObjectURL(audioBlob);
 }
 
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js").catch((error) => {
+    console.error("No se pudo registrar el service worker:", error);
+  });
+}
+
 recordBtn.addEventListener("click", async () => {
   try {
     if (recording) {

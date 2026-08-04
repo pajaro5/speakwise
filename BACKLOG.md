@@ -55,6 +55,7 @@ ITER-5: Auto-ajuste  │             │                   │
 
 - [ ] **PWA básica** — manifest.json + service-worker.js
   - DoD: instalable en iPhone y Android desde Chrome
+  - Estado: verificado en Chrome desktop — manifest válido, íconos 192/512 presentes, service worker registrado sin errores (confirmado en vivo con Claude en Chrome). **Falta**: confirmar instalación real en iPhone y Android (solo lo puede hacer el usuario con los dispositivos físicos).
 
 - [ ] **Sesión completa** — 3 módulos: nuclear stress + chunk + conversación libre
   - DoD: sesión de 20 min de principio a fin sin errores

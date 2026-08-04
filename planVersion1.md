@@ -257,11 +257,15 @@ Orden pensado para respetar la dirección de dependencias de `CODING_STANDARDS.m
 
 ---
 
-### Fase 8 — PWA básica
+### Fase 8 — PWA básica ✅ verificado (Chrome desktop) — instalación real en teléfono pendiente
 
-- `frontend/manifest.json`, `frontend/service-worker.js`
+**Tests con TDD estricto (`tests/frontend/test_pwa.py`, 5 tests, uno a la vez con rojo confirmado):** `manifest.json` válido con campos requeridos (`name`, `short_name`, `start_url`, `display`); tiene íconos 192x192 y 512x512 que existen en disco; `index.html` linkea el manifest; `service-worker.js` tiene un listener de `fetch` (requisito de Chrome para instalabilidad); `app.js` registra el service worker.
 
-**DoD:** instalable desde Chrome móvil en iPhone y Android (verificación manual — instalar y confirmar ícono en pantalla de inicio).
+**Implementación:** `frontend/manifest.json` (con `frontend/icon.svg` como ícono — SVG en vez de PNG, evita necesitar generación de imágenes binarias; Chrome acepta SVG para manifests de PWA), `frontend/service-worker.js` (cachea el app shell en `install`, sirve desde caché con fallback a red en `fetch`, **excluye `/api/*` explícitamente** para no cachear respuestas de transcribe/tutor/speak), meta tags de iOS en `index.html` (`apple-touch-icon`, `apple-mobile-web-app-capable`).
+
+**Verificación en vivo (Claude en Chrome, no solo tests):** manifest se lee correctamente vía `fetch`, service worker registrado con el scope correcto (`http://localhost:8000/`), sin errores ni warnings en consola tras recargar la página.
+
+**DoD (criterio literal de `BACKLOG.md`: "instalable en iPhone y Android desde Chrome"):** ⚠️ **Parcial.** Todos los requisitos técnicos de instalabilidad verificados en Chrome desktop. Falta que el usuario confirme la instalación real en un iPhone y un Android (dispositivos físicos que no están disponibles acá) — mismo patrón que Chrome móvil en Fase 7.
 
 ---
 
