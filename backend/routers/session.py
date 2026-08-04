@@ -1,10 +1,11 @@
 import sqlite3
+from datetime import date
 from typing import Literal
 
 from fastapi import APIRouter, Depends, File, Response, UploadFile
 from pydantic import BaseModel
 
-from backend.database import get_db
+from backend.database import create_session, get_db
 from backend.providers.base import LLMProvider, STTProvider, TTSProvider
 from backend.providers.factory import get_llm_provider, get_stt_provider, get_tts_provider
 from backend.services.acoustic import transcribe_and_analyze
@@ -28,12 +29,27 @@ class TutorRequest(BaseModel):
     fillers: int = 0
 
 
+class SessionStartRequest(BaseModel):
+    topic: str = ""
+
+
 class LogRequest(BaseModel):
     session_id: int
     event: Literal["pattern_practiced", "chunk_used"]
     pattern_id: int | None = None
     chunk: str | None = None
     transcript: str | None = None
+
+
+@router.post("/session/start")
+async def post_session_start(
+    body: SessionStartRequest, db: sqlite3.Connection = Depends(get_db)
+) -> dict:
+    session_id = create_session(
+        db, date=date.today().isoformat(), topic=body.topic,
+        transcript="", wpm=0.0, fillers=0, feedback="",
+    )
+    return {"session_id": session_id}
 
 
 @router.post("/transcribe")

@@ -61,6 +61,8 @@ speakwise/
 │   ├── services/
 │   │   ├── curriculum.py     ← Curriculum Engine
 │   │   ├── acoustic.py       ← pipeline STT + análisis
+│   │   ├── tutor.py          ← system prompt + LLM + persistencia de sesión
+│   │   ├── log.py            ← POST /api/log: tracking de patrón/chunk (Fase 9)
 │   │   ├── patterns.py       ← detección de patrones fonéticos
 │   │   ├── spaced_rep.py     ← algoritmo SM-2
 │   │   ├── worksheet.py      ← generación de hoja de trabajo
@@ -222,6 +224,7 @@ CREATE INDEX idx_pattern_stage    ON pattern_progress(stage, accuracy);
 | `POST` | `/api/transcribe` | Audio → texto + métricas |
 | `POST` | `/api/tutor` | Transcripción + historial → respuesta Claude |
 | `POST` | `/api/speak` | Texto → audio TTS stream |
+| `POST` | `/api/session/start` | Crea la fila de `sessions`, devuelve `session_id` (agregado Fase 9) |
 | `GET` | `/api/today` | Plan pedagógico del día (≤ 300 tokens de corpus) |
 | `GET` | `/api/panel` | Panel de apoyo para conversación libre |
 | `POST` | `/api/log` | Registrar exposición al finalizar turno |
@@ -285,6 +288,38 @@ CREATE INDEX idx_pattern_stage    ON pattern_progress(stage, accuracy);
 
 // Response: audio/mpeg (bytes), no JSON
 ```
+
+### POST /api/session/start
+
+*(Agregado en Fase 9 de `planVersion1.md` — necesario para que los 3 módulos de una sesión compartan `session_id` desde el principio, en vez de crearlo recién en el primer `/api/tutor`.)*
+
+```json
+// Request
+{"topic": "tu semana de trabajo"}
+
+// Response
+{"session_id": 42}
+```
+
+Llamar esto al empezar la sesión, y pasar el `session_id` devuelto a `/api/tutor` y `/api/log` durante toda la sesión (en vez de dejar que `/api/tutor` cree uno nuevo).
+
+### POST /api/log
+
+*(Contrato definido en Fase 9 — antes solo estaba el nombre del endpoint en la tabla.)*
+
+```json
+// Request — practicar un patrón fonético (módulo nuclear stress)
+{"session_id": 42, "event": "pattern_practiced", "pattern_id": 3}
+// Response
+{"ok": true}
+
+// Request — registrar uso del chunk del día (módulo chunk)
+{"session_id": 42, "event": "chunk_used", "chunk": "I was thinking maybe", "transcript": "well I was thinking maybe we go"}
+// Response
+{"ok": true, "produced": true}
+```
+
+`pattern_practiced` solo cuenta exposición (`pattern_progress.sessions_practiced`) — no hay scoring de precisión todavía, eso requiere el análisis de fonemas de ITER-2 que no existe. `chunk_used` verifica por substring (case-insensitive) si el chunk aparece en la transcripción.
 
 ### GET /api/today
 
@@ -426,3 +461,4 @@ class LLMProvider(ABC):
 | 1.4 | Ago 2026 | Fase 3 de planVersion1.md: providers locales/libres (`whisperx_local`, `kokoro`, `ollama_qwen`) pasan a ser el default en MVP, no V2 — decisión explícita del usuario ("todo en lo posible sea con software libre"). Agregado `llm_deepseek.py` como alternativa paga más económica que Claude cuando se necesite un servicio contratado. |
 | 1.5 | Ago 2026 | Ollama+Qwen removido de `docker-compose.yml` y como default de LLM — la PC de desarrollo no soporta correr un modelo de 7B. Nuevo default de LLM: DeepSeek (paga, más económica). El provider `llm_ollama.py` queda en el código, disponible por env var para uso futuro en otra máquina. |
 | 1.6 | Ago 2026 | Fase 6 de planVersion1.md: agregados contratos de `POST /api/tutor` y `POST /api/speak` (no estaban especificados con ejemplo). `session_id` en `/tutor` decide crear vs actualizar la fila de `sessions`. |
+| 1.7 | Ago 2026 | Fase 9 de planVersion1.md (parte 1, backend): agregado `POST /api/session/start` (no estaba en el árbol original de endpoints) y definido el contrato de `POST /api/log` (antes solo el nombre). Agregado `services/log.py` y `services/tutor.py` al árbol de archivos. |

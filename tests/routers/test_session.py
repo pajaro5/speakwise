@@ -272,3 +272,22 @@ def test_log_invalid_event_returns_422(client) -> None:
     response = test_client.post("/api/log", json={"session_id": 1, "event": "not_real"})
 
     assert response.status_code == 422
+
+
+def test_session_start_creates_session_and_returns_id(client) -> None:
+    test_client, db_path = client
+    response = test_client.post("/api/session/start", json={"topic": "tu semana"})
+
+    assert response.status_code == 200
+    session_id = response.json()["session_id"]
+    with db_connection(db_path) as conn:
+        row = conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
+    assert row["topic"] == "tu semana"
+
+
+def test_session_start_works_without_topic(client) -> None:
+    test_client, _ = client
+    response = test_client.post("/api/session/start", json={})
+
+    assert response.status_code == 200
+    assert isinstance(response.json()["session_id"], int)
