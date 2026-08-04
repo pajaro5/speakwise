@@ -1,4 +1,5 @@
 import sqlite3
+from typing import Literal
 
 from fastapi import APIRouter, Depends, File, Response, UploadFile
 from pydantic import BaseModel
@@ -7,6 +8,7 @@ from backend.database import get_db
 from backend.providers.base import LLMProvider, STTProvider, TTSProvider
 from backend.providers.factory import get_llm_provider, get_stt_provider, get_tts_provider
 from backend.services.acoustic import transcribe_and_analyze
+from backend.services.log import handle_log_event
 from backend.services.tutor import get_tutor_reply
 
 router = APIRouter(prefix="/api", tags=["session"])
@@ -24,6 +26,14 @@ class TutorRequest(BaseModel):
     topic: str = ""
     wpm: float = 0.0
     fillers: int = 0
+
+
+class LogRequest(BaseModel):
+    session_id: int
+    event: Literal["pattern_practiced", "chunk_used"]
+    pattern_id: int | None = None
+    chunk: str | None = None
+    transcript: str | None = None
 
 
 @router.post("/transcribe")
@@ -61,3 +71,11 @@ async def post_tutor(
         topic=body.topic, wpm=body.wpm, fillers=body.fillers,
     )
     return {"reply": reply, "session_id": session_id}
+
+
+@router.post("/log")
+async def post_log(body: LogRequest, db: sqlite3.Connection = Depends(get_db)) -> dict:
+    return handle_log_event(
+        db, session_id=body.session_id, event=body.event,
+        pattern_id=body.pattern_id, chunk=body.chunk, transcript=body.transcript,
+    )

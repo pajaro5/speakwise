@@ -12,3 +12,7 @@ class InvalidAudioError(SpeakWiseError):
 
 class UnknownProviderError(SpeakWiseError):
     """A provider name from config doesn't match any implementation."""
+
+
+class InvalidLogEventError(SpeakWiseError):
+    """POST /api/log is missing a field required for its event type."""

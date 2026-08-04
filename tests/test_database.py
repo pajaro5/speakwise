@@ -68,3 +68,58 @@ def test_connection_closes_after_context_manager(temp_db_path: str) -> None:
 
     with pytest.raises(sqlite3.ProgrammingError):
         conn.execute("SELECT 1")
+
+
+def test_upsert_pattern_progress_creates_row_on_first_practice(temp_db_path: str) -> None:
+    from backend.database import upsert_pattern_progress
+
+    with db_connection(temp_db_path) as conn:
+        conn.execute(
+            "INSERT INTO phonetic_patterns (id, name, priority) VALUES (1, '-age/-idge', 1)"
+        )
+        conn.commit()
+
+        upsert_pattern_progress(conn, pattern_id=1)
+
+        row = conn.execute(
+            "SELECT * FROM pattern_progress WHERE pattern_id = 1"
+        ).fetchone()
+
+    assert row["stage"] == 1
+    assert row["sessions_practiced"] == 1
+    assert row["last_seen"] is not None
+
+
+def test_upsert_pattern_progress_increments_on_repeat(temp_db_path: str) -> None:
+    from backend.database import upsert_pattern_progress
+
+    with db_connection(temp_db_path) as conn:
+        conn.execute(
+            "INSERT INTO phonetic_patterns (id, name, priority) VALUES (1, '-age/-idge', 1)"
+        )
+        conn.commit()
+
+        upsert_pattern_progress(conn, pattern_id=1)
+        upsert_pattern_progress(conn, pattern_id=1)
+
+        row = conn.execute(
+            "SELECT * FROM pattern_progress WHERE pattern_id = 1"
+        ).fetchone()
+
+    assert row["sessions_practiced"] == 2
+
+
+def test_mark_chunk_used_updates_session_row(temp_db_path: str) -> None:
+    from backend.database import create_session, mark_chunk_used
+
+    with db_connection(temp_db_path) as conn:
+        session_id = create_session(
+            conn, date="2026-08-05", topic="", transcript="hi", wpm=0.0, fillers=0, feedback="",
+        )
+
+        mark_chunk_used(conn, session_id, chunk="I was thinking maybe", produced=True)
+
+        row = conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
+
+    assert row["chunk_used"] == "I was thinking maybe"
+    assert row["chunk_produced"] == 1

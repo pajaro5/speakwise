@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.routers import progress, session
-from backend.services.exceptions import ProviderUnavailableError
+from backend.services.exceptions import InvalidLogEventError, ProviderUnavailableError
 
 app = FastAPI(title="SpeakWise", version="1.0.0")
 
@@ -27,6 +27,13 @@ async def config_missing_handler(request: Request, exc: EnvironmentError) -> JSO
     # sin este handler el error queda como 500 sin manejar (bug real encontrado
     # probando /tutor a mano sin DEEPSEEK_API_KEY configurada).
     return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
+@app.exception_handler(InvalidLogEventError)
+async def invalid_log_event_handler(
+    request: Request, exc: InvalidLogEventError
+) -> JSONResponse:
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
 
 
 app.include_router(session.router)

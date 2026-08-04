@@ -219,3 +219,56 @@ def test_full_cycle_transcribe_tutor_speak_under_10_seconds(client) -> None:
     assert tutor_resp.status_code == 200
     assert speak_resp.status_code == 200
     assert elapsed < 10.0
+
+
+def test_log_pattern_practiced_returns_200(client) -> None:
+    test_client, db_path = client
+    with db_connection(db_path) as conn:
+        conn.execute(
+            "INSERT INTO phonetic_patterns (id, name, priority) VALUES (1, '-age/-idge', 1)"
+        )
+        session_id = conn.execute(
+            "INSERT INTO sessions (date) VALUES ('2026-08-05')"
+        ).lastrowid
+        conn.commit()
+
+    response = test_client.post(
+        "/api/log",
+        json={"session_id": session_id, "event": "pattern_practiced", "pattern_id": 1},
+    )
+
+    assert response.status_code == 200
+    with db_connection(db_path) as conn:
+        row = conn.execute(
+            "SELECT sessions_practiced FROM pattern_progress WHERE pattern_id = 1"
+        ).fetchone()
+    assert row["sessions_practiced"] == 1
+
+
+def test_log_chunk_used_returns_whether_produced(client) -> None:
+    test_client, db_path = client
+    with db_connection(db_path) as conn:
+        session_id = conn.execute(
+            "INSERT INTO sessions (date) VALUES ('2026-08-05')"
+        ).lastrowid
+        conn.commit()
+
+    response = test_client.post(
+        "/api/log",
+        json={
+            "session_id": session_id,
+            "event": "chunk_used",
+            "chunk": "I was thinking maybe",
+            "transcript": "well I was thinking maybe we go",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True, "produced": True}
+
+
+def test_log_invalid_event_returns_422(client) -> None:
+    test_client, _ = client
+    response = test_client.post("/api/log", json={"session_id": 1, "event": "not_real"})
+
+    assert response.status_code == 422

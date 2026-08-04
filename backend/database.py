@@ -1,6 +1,7 @@
 import sqlite3
 from contextlib import contextmanager
 from collections.abc import Generator, Iterator
+from datetime import date
 
 from backend.config import load_settings
 
@@ -172,5 +173,38 @@ def update_session(
         "UPDATE sessions SET transcript = ?, wpm = ?, fillers = ?, feedback = ? "
         "WHERE id = ?",
         (transcript, wpm, fillers, feedback, session_id),
+    )
+    conn.commit()
+
+
+def upsert_pattern_progress(conn: sqlite3.Connection, pattern_id: int) -> None:
+    """Registra una práctica del patrón fonético. Sin scoring de precisión todavía
+    (eso es ITER-2, requiere análisis de fonemas) — solo cuenta exposición."""
+    today = date.today().isoformat()
+    existing = conn.execute(
+        "SELECT id, sessions_practiced FROM pattern_progress WHERE pattern_id = ?",
+        (pattern_id,),
+    ).fetchone()
+    if existing:
+        conn.execute(
+            "UPDATE pattern_progress SET sessions_practiced = ?, last_seen = ? "
+            "WHERE id = ?",
+            (existing["sessions_practiced"] + 1, today, existing["id"]),
+        )
+    else:
+        conn.execute(
+            "INSERT INTO pattern_progress (pattern_id, stage, sessions_practiced, last_seen) "
+            "VALUES (?, 1, 1, ?)",
+            (pattern_id, today),
+        )
+    conn.commit()
+
+
+def mark_chunk_used(
+    conn: sqlite3.Connection, session_id: int, *, chunk: str, produced: bool
+) -> None:
+    conn.execute(
+        "UPDATE sessions SET chunk_used = ?, chunk_produced = ? WHERE id = ?",
+        (chunk, int(produced), session_id),
     )
     conn.commit()
