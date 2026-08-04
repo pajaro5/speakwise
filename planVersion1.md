@@ -235,7 +235,7 @@ Orden pensado para respetar la dirección de dependencias de `CODING_STANDARDS.m
 
 ---
 
-### Fase 7 — Frontend básico ✅ Chrome desktop · ⚠️ Chrome móvil (grabación pendiente de flag de Chrome)
+### Fase 7 — Frontend básico ✅ COMPLETA — Chrome desktop y Chrome móvil confirmados
 
 > **Decisión tomada al arrancar la fase (preguntada al usuario):** el plan original decía "no es TDD en el sentido de pytest". Se ofrecieron 2 caminos — agregar Playwright para TDD real de browser, o tests de estructura/contenido vía pytest + QA manual — y se eligió la segunda por costo de recursos (Playwright es pesado, y esta PC ya mostró límites con Ollama).
 
@@ -245,7 +245,7 @@ Orden pensado para respetar la dirección de dependencias de `CODING_STANDARDS.m
 - ✅ La página carga sin errores de consola, con los estilos aplicados (Claude en Chrome)
 - ✅ El botón dispara `getUserMedia` correctamente
 - ✅ **Ciclo completo confirmado por el usuario con micrófono real**: grabar → transcribir → corrección del tutor (DeepSeek) → audio de respuesta (Kokoro) — funciona de punta a punta
-- ✅ **Chrome móvil probado por el usuario por WiFi**: la página carga bien (layout responsive confirmado en la práctica), pero el botón de grabar no hacía nada — ver bug 2 abajo.
+- ✅ **Chrome móvil confirmado por el usuario por WiFi**: después del flag de Chrome (ver bug 2 abajo), la grabación funciona en el celular también
 
 **Implementación:** `frontend/index.html`, `frontend/app.js` (Web Audio API + MediaRecorder + fetch a `/transcribe /tutor /speak` encadenados), `frontend/styles.css`.
 
@@ -253,7 +253,7 @@ Orden pensado para respetar la dirección de dependencias de `CODING_STANDARDS.m
 >
 > **Bug 2 (encontrado probando en el celular por WiFi):** el botón de grabar no hacía nada, sin popup de permiso ni error visible. Causa real: `navigator.mediaDevices` **solo existe en contextos seguros** (HTTPS o `localhost`) — por WiFi se accede vía `http://192.168.1.4:8000`, un origen no seguro, así que Chrome ni siquiera expone la API (no es que el permiso se deniegue, la función no existe). El click handler tampoco tenía manejo de errores, así que el fallo quedaba invisible. Corregido con TDD: chequeo explícito de `navigator.mediaDevices` con mensaje claro en pantalla, y el click handler ahora atrapa cualquier error. **Solución real para probar sin HTTPS:** habilitar `chrome://flags/#unsafely-treat-insecure-origin-as-secure` en el celular con la IP de la PC — es una limitación de seguridad del navegador, no algo resoluble desde el servidor.
 
-**DoD (criterio literal de `BACKLOG.md`: "funciona en Chrome desktop y Chrome móvil"):** ✅ Chrome desktop confirmado de punta a punta con micrófono real y providers reales (DeepSeek + Kokoro). Chrome móvil: página y layout confirmados; grabación pendiente de que el usuario habilite el flag de Chrome y reintente. 95/95 tests.
+**DoD (criterio literal de `BACKLOG.md`: "funciona en Chrome desktop y Chrome móvil"):** ✅ **CUMPLIDO.** Chrome desktop y Chrome móvil confirmados de punta a punta por el usuario, con micrófono real y providers reales (DeepSeek + Kokoro). 95/95 tests.
 
 ---
 

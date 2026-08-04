@@ -51,7 +51,7 @@ ITER-5: Auto-ajuste  │             │                   │
 
 - [x] **Frontend básico** — index.html + app.js + grabación de audio
   - DoD: funciona en Chrome desktop y Chrome móvil
-  - Estado: confirmado por el usuario en Chrome desktop — grabación, transcripción, respuesta del tutor (DeepSeek) y audio de respuesta (Kokoro) funcionan de punta a punta. **Falta solo**: probar en el celular por WiFi (no bloquea Chrome desktop).
+  - Estado: confirmado por el usuario en Chrome desktop Y Chrome móvil (por WiFi, con el flag de Chrome para permitir micrófono sin HTTPS) — grabación, transcripción, respuesta del tutor (DeepSeek) y audio de respuesta (Kokoro) funcionan de punta a punta en ambos.
 
 - [ ] **PWA básica** — manifest.json + service-worker.js
   - DoD: instalable en iPhone y Android desde Chrome
