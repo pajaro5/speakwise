@@ -40,7 +40,7 @@ ITER-5: Auto-ajuste  │             │                   │
 - [x] **seed.py** — Añadir chunks por forma verbal (top 50 lemmas × sus tiempos)
   - DoD: ≥ 150 chunks con `function` y `level` definidos
 
-- [ ] **acoustic.py** — Pipeline básico: Whisper API + WPM + fillers
+- [x] **acoustic.py** — Pipeline básico: Whisper API + WPM + fillers
   - DoD: WPM y fillers calculados correctamente desde timestamps de Whisper
 
 - [ ] **curriculum.py** — GET /api/today con las 3 queries básicas

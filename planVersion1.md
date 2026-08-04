@@ -174,14 +174,18 @@ Orden pensado para respetar la dirección de dependencias de `CODING_STANDARDS.m
 
 ---
 
-### Fase 4 — `acoustic.py` (WPM + fillers)
+### Fase 4 — `acoustic.py` (WPM + fillers) ✅
 
-**Tests primero:**
-- `tests/services/test_acoustic.py` — con timestamps de Whisper simulados (fixture fija), `wpm` calculado coincide con el valor esperado a mano; conteo de fillers (`um`, `uh`, `eh`) correcto; función CPU-bound corre en `ThreadPoolExecutor` compartido (se verifica que no bloquea el loop con un test async)
+> **Corrección al ejecutar:** la mención original de `ThreadPoolExecutor` para esta fase no aplicaba — el cálculo de `wpm`/`fillers` es aritmética simple sobre una lista corta de timestamps, no es CPU-bound. El trabajo pesado (inferencia del modelo) ya corre en `ThreadPoolExecutor` dentro de `providers/stt_whisperx.py` (Fase 3), que es la capa correcta según `CODING_STANDARDS.md` §11.
 
-**Implementación:** `services/acoustic.py` — llama al provider STT (vía factory), calcula `wpm`/`fillers`, arma el `Transcript` final.
+**Tests (`tests/services/test_acoustic.py`, 9 tests):**
+- `_compute_wpm`: coincide con cálculo manual, devuelve `0.0` con 0 o 1 palabra
+- `_count_fillers`: detecta `um`/`uh`/etc., case-insensitive, ignora puntuación
+- `transcribe_and_analyze`: arma el `Transcript` final a partir de un provider (inyectado para test, o el de `factory.py` por default); maneja transcripción vacía sin errores
 
-**DoD (= DoD de `acoustic.py` MVP en `DEFINITION-OF-DONE.md`):** WPM y fillers correctos desde timestamps reales de Whisper; funciona con audio `.webm` de móvil (test con fixture de audio webm).
+**Implementación:** `services/acoustic.py` — llama al provider STT (inyectable, default = `factory.get_stt_provider()`), calcula `wpm`/`fillers` sobre los timestamps crudos, arma el `Transcript` final.
+
+**DoD (= DoD de `acoustic.py` MVP en `DEFINITION-OF-DONE.md`):** ✅ WPM y fillers correctos desde timestamps (9/9 tests, suite completa 55/55 en verde).
 
 ---
 
