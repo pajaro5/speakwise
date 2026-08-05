@@ -18,6 +18,10 @@ const chunkFunctionEl = document.getElementById("chunk-function");
 const listenChunkBtn = document.getElementById("listen-chunk-btn");
 const recordChunkBtn = document.getElementById("record-chunk-btn");
 const chunkFeedbackEl = document.getElementById("chunk-feedback");
+const chunkExamplesStatusEl = document.getElementById("chunk-examples-status");
+const chunkExampleSentenceEl = document.getElementById("chunk-example-sentence");
+const chunkExampleParagraphEl = document.getElementById("chunk-example-paragraph");
+const chunkExampleConversationEl = document.getElementById("chunk-example-conversation");
 const nextToModule3Btn = document.getElementById("next-to-module-3-btn");
 
 const module3El = document.getElementById("module-3");
@@ -188,6 +192,22 @@ async function handleRecordingStop() {
   }
 }
 
+async function loadChunkExamples() {
+  chunkExamplesStatusEl.textContent = "Cargando ejemplos...";
+  try {
+    const examples = await postJson("/api/chunk-examples", {
+      chunk: todaysPlan.chunk_today.chunk,
+      function: todaysPlan.chunk_today.function,
+    });
+    chunkExampleSentenceEl.textContent = examples.sentence;
+    chunkExampleParagraphEl.textContent = examples.paragraph;
+    chunkExampleConversationEl.textContent = examples.conversation;
+    chunkExamplesStatusEl.textContent = "";
+  } catch (error) {
+    chunkExamplesStatusEl.textContent = `No se pudieron cargar los ejemplos: ${error.message}`;
+  }
+}
+
 async function handlePatternRecording(audioBlob) {
   statusEl.textContent = "Transcribiendo...";
   await transcribeAudio(audioBlob); // solo confirma que se grabó algo, no hay scoring todavia
@@ -258,7 +278,10 @@ listenPatternBtn.addEventListener("click", () => {
 
 practicePatternBtn.addEventListener("click", () => startRecording("pattern"));
 
-nextToModule2Btn.addEventListener("click", () => showModule(module2El));
+nextToModule2Btn.addEventListener("click", () => {
+  showModule(module2El);
+  loadChunkExamples();
+});
 
 listenChunkBtn.addEventListener("click", () => {
   playTextWithButton(todaysPlan.chunk_today.chunk, listenChunkBtn).catch((error) => {

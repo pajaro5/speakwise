@@ -221,6 +221,45 @@ def test_full_cycle_transcribe_tutor_speak_under_10_seconds(client) -> None:
     assert elapsed < 10.0
 
 
+def test_chunk_examples_returns_three_examples(client) -> None:
+    test_client, _ = client
+
+    class _JsonLLM(LLMProvider):
+        async def complete(self, messages, system, max_tokens=400) -> str:
+            import json
+
+            return json.dumps(
+                {"sentence": "s", "paragraph": "p", "conversation": "c"}
+            )
+
+    app.dependency_overrides[session_router.get_llm_provider] = lambda: _JsonLLM()
+
+    response = test_client.post(
+        "/api/chunk-examples",
+        json={"chunk": "Be careful with that.", "function": "imperative"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"sentence": "s", "paragraph": "p", "conversation": "c"}
+
+
+def test_chunk_examples_returns_503_when_llm_returns_bad_json(client) -> None:
+    test_client, _ = client
+
+    class _BadLLM(LLMProvider):
+        async def complete(self, messages, system, max_tokens=400) -> str:
+            return "no es json"
+
+    app.dependency_overrides[session_router.get_llm_provider] = lambda: _BadLLM()
+
+    response = test_client.post(
+        "/api/chunk-examples",
+        json={"chunk": "Be careful with that.", "function": "imperative"},
+    )
+
+    assert response.status_code == 503
+
+
 def test_log_pattern_practiced_returns_200(client) -> None:
     test_client, db_path = client
     with db_connection(db_path) as conn:

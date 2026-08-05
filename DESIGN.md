@@ -321,6 +321,23 @@ Llamar esto al empezar la sesión, y pasar el `session_id` devuelto a `/api/tuto
 
 `pattern_practiced` solo cuenta exposición (`pattern_progress.sessions_practiced`) — no hay scoring de precisión todavía, eso requiere el análisis de fonemas de ITER-2 que no existe. `chunk_used` verifica por substring (case-insensitive) si el chunk aparece en la transcripción.
 
+### POST /api/chunk-examples
+
+Pedido por el usuario probando módulo 2 ("quiero que muestre 3 ejemplos de uso"). No es contenido curado — se genera con el LLM configurado (`services/chunk_examples.py`), porque curar a mano 3 ejemplos × 200 chunks no escala. El frontend lo llama automáticamente al entrar a módulo 2 (no bloquea el resto del módulo, que ya tiene el chunk/función desde `/api/today`).
+
+```json
+// Request
+{"chunk": "Be careful with that.", "function": "imperative"}
+// Response
+{
+  "sentence": "Be careful with that.",
+  "paragraph": "I know this road is tricky. Be careful with that curve ahead. Slow down before you get there.",
+  "conversation": "A: I'm going to fix the wiring myself.\nB: Be careful with that — turn off the power first."
+}
+```
+
+Si el LLM no devuelve JSON válido o falta algún campo, `ProviderUnavailableError` → 503 (mismo patrón que `/api/tutor`).
+
 ### GET /api/today
 
 ```json

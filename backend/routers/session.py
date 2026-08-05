@@ -9,6 +9,7 @@ from backend.database import create_session, get_db
 from backend.providers.base import LLMProvider, STTProvider, TTSProvider
 from backend.providers.factory import get_llm_provider, get_stt_provider, get_tts_provider
 from backend.services.acoustic import transcribe_and_analyze
+from backend.services.chunk_examples import get_chunk_examples
 from backend.services.log import handle_log_event
 from backend.services.tutor import get_tutor_reply
 
@@ -31,6 +32,11 @@ class TutorRequest(BaseModel):
 
 class SessionStartRequest(BaseModel):
     topic: str = ""
+
+
+class ChunkExamplesRequest(BaseModel):
+    chunk: str
+    function: str
 
 
 class LogRequest(BaseModel):
@@ -87,6 +93,13 @@ async def post_tutor(
         topic=body.topic, wpm=body.wpm, fillers=body.fillers,
     )
     return {"reply": reply, "session_id": session_id}
+
+
+@router.post("/chunk-examples")
+async def post_chunk_examples(
+    body: ChunkExamplesRequest, llm: LLMProvider = Depends(get_llm_provider)
+) -> dict:
+    return await get_chunk_examples(llm, chunk=body.chunk, function=body.function)
 
 
 @router.post("/log")

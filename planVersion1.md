@@ -363,6 +363,29 @@ Suite completa: 127/127 (2 de integración deseleccionados).
 
 ---
 
+### Fase 9.4 — 3 ejemplos de uso del chunk del día (módulo 2) ✅
+
+El usuario probó módulo 2 con el chunk "Be careful with that." (function: imperative) y pidió mostrar 3 ejemplos de uso: una oración simple, un párrafo, y una "conversación".
+
+**Decisión de diseño:** curar a mano 3 ejemplos por chunk no escala — hay 200 chunks (50 lemmas × 4 tenses). Se generan bajo demanda con el LLM configurado (DeepSeek), reusando la misma abstracción `LLMProvider` que ya usa el tutor — consistente con la prioridad de software libre/pago más barato ya establecida en el proyecto.
+
+**Backend (TDD):**
+- `services/chunk_examples.py` (nuevo) — `get_chunk_examples(llm, chunk, function)`: prompt le pide al LLM devolver JSON `{sentence, paragraph, conversation}`; si no es JSON válido o falta un campo, `ProviderUnavailableError`. Tests: `tests/services/test_chunk_examples.py` (4 tests — shape, contenido enviado al LLM, JSON inválido, campo faltante).
+- `POST /api/chunk-examples` (nuevo, `routers/session.py`) — reusa el handler de `ProviderUnavailableError`→503 ya existente. Tests en `tests/routers/test_session.py` (2 tests).
+
+**Frontend (TDD estructural):** `index.html` — `#chunk-examples-status` (feedback de carga) + 3 elementos (`#chunk-example-sentence/paragraph/conversation`) dentro de módulo 2. `app.js` — `loadChunkExamples()` se llama automáticamente al entrar a módulo 2 (click en "Siguiente →" desde módulo 1), sin bloquear el resto del módulo (que ya tiene chunk/función desde `/api/today`); maneja error internamente, no puede rechazar sin capturar. Tests: `test_index_html_has_chunk_examples_elements`, `test_app_js_loads_chunk_examples_when_entering_module_2`.
+
+**Verificado en vivo contra DeepSeek real (Chrome, pestaña en primer plano):** feedback "Cargando ejemplos..." visible de inmediato, ejemplos recibidos ~12s después, coherentes y en contexto:
+- Oración: "Be careful with that glass; it's fragile."
+- Párrafo: sobre llevar una bandeja caliente, terminando en "Just take it slowly."
+- Conversación: diálogo de 3 líneas sobre cargar una caja pesada.
+
+`DESIGN.md` actualizado con el contrato de `POST /api/chunk-examples`.
+
+Suite completa: 135/135 (2 de integración deseleccionados).
+
+---
+
 ### Fase 10 — Cierre de v1
 
 - Checklist completo de `DEFINITION-OF-DONE.md` (global + por feature de esta iteración)

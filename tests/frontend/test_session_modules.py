@@ -79,3 +79,19 @@ def test_index_html_has_pattern_pronunciation_element() -> None:
     solo la regla en español y los ejemplos para escuchar."""
     html = _read("index.html")
     assert 'id="pattern-ipa"' in html
+
+
+def test_index_html_has_chunk_examples_elements() -> None:
+    """El usuario pidió 3 ejemplos de uso del chunk del día: oración simple,
+    párrafo, conversación."""
+    html = _read("index.html")
+    for element_id in [
+        "chunk-examples-status", "chunk-example-sentence",
+        "chunk-example-paragraph", "chunk-example-conversation",
+    ]:
+        assert f'id="{element_id}"' in html, f"falta #{element_id}"
+
+
+def test_app_js_loads_chunk_examples_when_entering_module_2() -> None:
+    js = _read("app.js")
+    assert '"/api/chunk-examples"' in js
