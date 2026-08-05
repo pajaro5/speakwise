@@ -39,5 +39,21 @@ async def invalid_log_event_handler(
 app.include_router(session.router)
 app.include_router(progress.router)
 
+
+class NoCacheStaticFiles(StaticFiles):
+    """StaticFiles no manda Cache-Control por defecto, y el navegador puede
+    servir un archivo viejo desde su caché HTTP sin revalidar (según su
+    heurística de frescura) — encontrado probando en vivo, el problema
+    persistía incluso con una recarga simple después de deployar un cambio
+    a app.js. no-cache fuerza revalidar (ETag/Last-Modified) en cada carga
+    — sigue siendo barato (304 si no cambió), pero nunca sirve algo viejo
+    sin chequear primero."""
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 # Servir el frontend estático — va al final: es un catch-all en "/"
-app.mount("/", StaticFiles(directory="frontend", html=True), name="static")
+app.mount("/", NoCacheStaticFiles(directory="frontend", html=True), name="static")

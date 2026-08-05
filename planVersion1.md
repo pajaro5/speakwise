@@ -492,6 +492,20 @@ Suite completa: 189/189 (3 de integración deseleccionados).
 
 ---
 
+### Fase 9.12 — Nombrar las palabras mal acentuadas + caché HTTP de app.js ✅
+
+El usuario probó módulo 1 con el fix de ITER-2 (stress detection) y reportó: "Stress correct on 2/4 word(s) — debe decirme cuáles son las que están mal".
+
+**Fix:** `handlePatternRecording()` ahora arma la lista de palabras incorrectas (`results.filter((r) => !r.correct).map((r) => r.word)`) y las nombra en el mensaje: `"Stress correct on 1/3 word(s) — check: average, village."`. Si todas están bien, mensaje distinto sin la parte de "check". Test: `test_app_js_pattern_recording_names_the_incorrect_words`.
+
+**Bug de infraestructura encontrado de paso verificando en vivo, no reportado por el usuario:** al probar el fix en Chrome, ni un reload normal ni limpiar el service worker (ya arreglado en Fase 8) hacían que se cargara el `app.js` nuevo — hizo falta un hard-refresh (Ctrl+Shift+R) para que se notara el cambio. Investigado: `StaticFiles` de Starlette no manda `Cache-Control`, así que el navegador puede servir un archivo viejo desde su caché HTTP normal sin siquiera intentar revalidar, según su heurística de frescura — un problema distinto y más profundo que el de Fase 8 (que era del *service worker*, ya en network-first). Esto significa que un usuario real podría no ver los cambios de un deploy nuevo ni con una recarga simple de la página, solo con hard-refresh (que la mayoría no sabe hacer, y no existe en un PWA instalado en el celular). Arreglado con `NoCacheStaticFiles` (subclase de `StaticFiles` en `main.py`) que agrega `Cache-Control: no-cache` a cada respuesta — fuerza revalidar (ETag/Last-Modified) en cada carga, sigue siendo barato (304 si no cambió) pero nunca sirve algo viejo sin chequear primero. Test: `test_static_files_are_served_with_no_cache_header`.
+
+**Verificado en vivo:** mensaje con palabras nombradas confirmado (`"Stress correct on 1/3 word(s) — check: average, village."`), y `curl -I /app.js` confirma el header `cache-control: no-cache` presente.
+
+Suite completa: 191/191 (3 de integración deseleccionados).
+
+---
+
 ### Fase 10 — Cierre de v1
 
 - Checklist completo de `DEFINITION-OF-DONE.md` (global + por feature de esta iteración)

@@ -277,7 +277,10 @@ async function handlePatternRecording(audioBlob) {
   const results = transcript.stress_results || [];
   if (results.length) {
     const correct = results.filter((r) => r.correct).length;
-    statusEl.textContent = `Stress correct on ${correct}/${results.length} word(s) — keep practicing!`;
+    const incorrect = results.filter((r) => !r.correct).map((r) => r.word);
+    statusEl.textContent = incorrect.length
+      ? `Stress correct on ${correct}/${results.length} word(s) — check: ${incorrect.join(", ")}.`
+      : `Nice! Stress correct on ${correct}/${results.length} word(s).`;
   } else {
     statusEl.textContent = `I heard: "${transcript.text}" — try saying one of the words above so I can check your stress.`;
   }

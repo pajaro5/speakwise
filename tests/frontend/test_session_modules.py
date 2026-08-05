@@ -230,6 +230,16 @@ def test_app_js_pattern_recording_sends_pattern_name_and_logs_phoneme_errors() -
     assert "phoneme_errors: transcript.phoneme_errors" in handler
 
 
+def test_app_js_pattern_recording_names_the_incorrect_words() -> None:
+    """El usuario reportó: "Stress correct on 2/4 word(s)" no dice cuáles
+    están mal. Tiene que nombrar las palabras incorrectas, no solo contar."""
+    js = _read("app.js")
+    handler = js.split("async function handlePatternRecording")[1]
+    handler = handler.split("async function handleChunkRecording")[0]
+    assert 'results.filter((r) => !r.correct)' in handler
+    assert "incorrect.join" in handler
+
+
 def test_app_js_pattern_recording_shows_what_it_heard_when_no_match() -> None:
     """El usuario preguntó "¿el sistema reconoce lo que digo de verdad?" —
     al decir algo sin relación con las palabras del patrón, la app mostraba
