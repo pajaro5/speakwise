@@ -100,7 +100,7 @@ async function transcribeAudio(audioBlob) {
 }
 
 async function startSession() {
-  statusEl.textContent = "Cargando el plan de hoy...";
+  statusEl.textContent = "Loading today's plan...";
   todaysPlan = await (await fetch("/api/today")).json();
   const started = await postJson("/api/session/start", { topic: "" });
   sessionId = started.session_id;
@@ -133,15 +133,15 @@ const BUTTON_FOR_MODE = {
   free: recordBtn,
 };
 const IDLE_LABEL = {
-  pattern: "🎙️ Grabar mi intento",
-  chunk: "🎙️ Usarlo en una oración",
-  free: "🎙️ Grabar",
+  pattern: "🎙️ Record my attempt",
+  chunk: "🎙️ Use it in a sentence",
+  free: "🎙️ Record",
 };
 
 async function startRecording(mode) {
   if (!navigator.mediaDevices) {
     statusEl.textContent =
-      "Error: el micrófono solo funciona en HTTPS o localhost. Por WiFi (http://IP:8000) el navegador lo bloquea.";
+      "Error: the microphone only works over HTTPS or localhost. Over WiFi (http://IP:8000) the browser blocks it.";
     return;
   }
   recordingMode = mode;
@@ -155,12 +155,12 @@ async function startRecording(mode) {
 
   const btn = BUTTON_FOR_MODE[mode];
   if (mode === "free") {
-    btn.textContent = "⏹️ Detener (tocá para parar)";
+    btn.textContent = "⏹️ Stop (tap to stop)";
   } else {
     btn.disabled = true;
-    btn.textContent = "🔴 Grabando... (se detiene solo)";
+    btn.textContent = "🔴 Recording... (stops automatically)";
   }
-  statusEl.textContent = "Grabando...";
+  statusEl.textContent = "Recording...";
 
   if (AUTO_STOP_MS[mode]) {
     setTimeout(() => {
@@ -207,7 +207,7 @@ function boldChunkOccurrences(text, chunk) {
 }
 
 async function loadChunkExamples() {
-  chunkExamplesStatusEl.textContent = "Cargando ejemplos...";
+  chunkExamplesStatusEl.textContent = "Loading examples...";
   try {
     const examples = await postJson("/api/chunk-examples", {
       chunk: todaysPlan.chunk_today.chunk,
@@ -219,24 +219,24 @@ async function loadChunkExamples() {
     chunkExampleConversationEl.innerHTML = boldChunkOccurrences(examples.conversation, chunk);
     chunkExamplesStatusEl.textContent = "";
   } catch (error) {
-    chunkExamplesStatusEl.textContent = `No se pudieron cargar los ejemplos: ${error.message}`;
+    chunkExamplesStatusEl.textContent = `Couldn't load the examples: ${error.message}`;
   }
 }
 
 async function handlePatternRecording(audioBlob) {
-  statusEl.textContent = "Transcribiendo...";
-  await transcribeAudio(audioBlob); // solo confirma que se grabó algo, no hay scoring todavia
+  statusEl.textContent = "Transcribing...";
+  await transcribeAudio(audioBlob); // just confirms something was recorded, no scoring yet
   await postJson("/api/log", {
     session_id: sessionId,
     event: "pattern_practiced",
     pattern_id: todaysPlan.pattern_focus.id,
   });
-  statusEl.textContent = "¡Practicado!";
+  statusEl.textContent = "Practiced!";
   nextToModule2Btn.classList.remove("hidden");
 }
 
 async function handleChunkRecording(audioBlob) {
-  statusEl.textContent = "Transcribiendo...";
+  statusEl.textContent = "Transcribing...";
   const transcript = await transcribeAudio(audioBlob);
   const result = await postJson("/api/log", {
     session_id: sessionId,
@@ -245,18 +245,18 @@ async function handleChunkRecording(audioBlob) {
     transcript: transcript.text,
   });
   chunkFeedbackEl.textContent = result.produced
-    ? "¡Bien! Usaste el chunk."
-    : `Dijiste: "${transcript.text}" — no detecté el chunk exacto, pero seguimos igual.`;
+    ? "Nice! You used the chunk."
+    : `You said: "${transcript.text}" — I didn't detect the exact chunk, but let's keep going.`;
   statusEl.textContent = "";
   nextToModule3Btn.classList.remove("hidden");
 }
 
 async function handleFreeConversationRecording(audioBlob) {
-  statusEl.textContent = "Transcribiendo...";
+  statusEl.textContent = "Transcribing...";
   const transcript = await transcribeAudio(audioBlob);
   transcriptEl.textContent = transcript.text;
 
-  statusEl.textContent = "Pensando...";
+  statusEl.textContent = "Thinking...";
   const tutor = await postJson("/api/tutor", {
     text: transcript.text, history, session_id: sessionId,
     wpm: transcript.wpm, fillers: transcript.fillers,
@@ -266,16 +266,16 @@ async function handleFreeConversationRecording(audioBlob) {
   history.push({ role: "user", content: transcript.text });
   history.push({ role: "assistant", content: tutor.reply });
 
-  statusEl.textContent = "Generando audio...";
+  statusEl.textContent = "Generating audio...";
   const audioUrl = await speak(tutor.reply);
   tutorAudioEl.src = audioUrl;
   tutorAudioEl.play();
-  statusEl.textContent = "Listo.";
+  statusEl.textContent = "Done.";
 }
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("service-worker.js").catch((error) => {
-    console.error("No se pudo registrar el service worker:", error);
+    console.error("Service worker registration failed:", error);
   });
 }
 

@@ -132,3 +132,23 @@ def test_app_js_bolding_ignores_trailing_punctuation() -> None:
     al buscar coincidencias."""
     js = _read("app.js")
     assert "[.!?]+$" in js
+
+
+def test_ui_text_is_in_english_not_spanish() -> None:
+    """El usuario pidió que toda la interfaz (botones, instrucciones,
+    mensajes de estado/error) esté en inglés. Las explicaciones de reglas
+    de pronunciación (rule_es, dato de la DB) quedan en español a propósito
+    -- esto solo cubre el texto fijo de index.html/app.js."""
+    html = _read("index.html")
+    js = _read("app.js")
+    spanish_markers = [
+        "Empezar sesión", "Escuchar ejemplos", "Grabar mi intento", "Siguiente",
+        "Módulo", "Pronunciación:", "Usarlo en una oración", "Conversación libre",
+        "blanco", "arrancar", "Conectores", "Temas:",
+        "Cargando el plan", "Grabando", "Transcribiendo", "Pensando",
+        "Generando audio", "Listo.", "Practicado", "Usaste el chunk",
+        "no detecté el chunk", "No se pudieron cargar", "Cargando ejemplos",
+    ]
+    for marker in spanish_markers:
+        assert marker not in html, f"queda texto en español en index.html: {marker!r}"
+        assert marker not in js, f"queda texto en español en app.js: {marker!r}"

@@ -402,6 +402,20 @@ Suite completa: 141/141 (2 de integración deseleccionados).
 
 ---
 
+### Fase 9.6 — Interfaz completa en inglés ✅
+
+El usuario pidió que toda la app esté en inglés: botones, títulos, mensajes de estado/error. Antes de tocar código se preguntó el alcance exacto vía `AskUserQuestion`, porque incluía una decisión de producto real: ¿también las explicaciones de reglas de pronunciación (`rule_es`, ej. "Termina en -age o -idge = /ɪdʒ/, la E no suena"), que están en español a propósito como técnica pedagógica (explicar la regla nueva en el idioma nativo)? El usuario eligió **solo la interfaz** — `rule_es` queda en español.
+
+**Cambios:** `index.html` (`lang="es"` → `lang="en"`, títulos de los 3 módulos, texto de todos los botones, labels del panel de apoyo de módulo 3) y `app.js` (todos los mensajes de `statusEl`/`chunkFeedbackEl`/`chunkExamplesStatusEl`, labels de grabación por modo, mensaje de error de micrófono, log de consola del service worker).
+
+**Test de regresión (TDD):** `test_ui_text_is_in_english_not_spanish` — lista de 20 marcadores de texto en español que existían antes, verifica que ninguno esté en `index.html`/`app.js` (no en las reglas de pronunciación de la DB, que no se tocan). RED confirmado con el texto viejo, GREEN tras traducir.
+
+**Verificado en vivo (Chrome):** botones, títulos y mensajes en inglés; `pattern_rule` sigue mostrando la explicación en español, sin cambios.
+
+Suite completa: 142/142 (2 de integración deseleccionados).
+
+---
+
 ### Fase 10 — Cierre de v1
 
 - Checklist completo de `DEFINITION-OF-DONE.md` (global + por feature de esta iteración)

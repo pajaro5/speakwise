@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,45 +16,45 @@
     <p id="status"></p>
 
     <section id="start-screen">
-        <button id="start-session-btn">Empezar sesión</button>
+        <button id="start-session-btn">Start session</button>
     </section>
 
     <section id="module-1" class="module hidden">
-        <h2>Módulo 1 — Pronunciación</h2>
+        <h2>Module 1 — Pronunciation</h2>
         <p id="pattern-name"></p>
         <p id="pattern-rule"></p>
-        <p>Pronunciación: <strong id="pattern-ipa"></strong></p>
+        <p>Pronunciation: <strong id="pattern-ipa"></strong></p>
         <p id="pattern-family"></p>
-        <button id="listen-pattern-btn">Escuchar ejemplos</button>
-        <button id="practice-pattern-btn">🎙️ Grabar mi intento</button>
-        <button id="next-to-module-2-btn" class="hidden">Siguiente →</button>
+        <button id="listen-pattern-btn">Listen to examples</button>
+        <button id="practice-pattern-btn">🎙️ Record my attempt</button>
+        <button id="next-to-module-2-btn" class="hidden">Next →</button>
     </section>
 
     <section id="module-2" class="module hidden">
-        <h2>Módulo 2 — Chunk del día</h2>
+        <h2>Module 2 — Chunk of the day</h2>
         <p><strong id="chunk-text"></strong></p>
         <p id="chunk-function"></p>
-        <button id="listen-chunk-btn">Escuchar</button>
+        <button id="listen-chunk-btn">Listen</button>
         <p id="chunk-examples-status"></p>
         <div id="chunk-examples">
             <p>✏️ <span id="chunk-example-sentence"></span></p>
             <p>📄 <span id="chunk-example-paragraph"></span></p>
             <p>💬 <span id="chunk-example-conversation"></span></p>
         </div>
-        <button id="record-chunk-btn">🎙️ Usarlo en una oración</button>
+        <button id="record-chunk-btn">🎙️ Use it in a sentence</button>
         <p id="chunk-feedback"></p>
-        <button id="next-to-module-3-btn" class="hidden">Siguiente →</button>
+        <button id="next-to-module-3-btn" class="hidden">Next →</button>
     </section>
 
     <section id="module-3" class="module hidden">
-        <h2>Módulo 3 — Conversación libre</h2>
+        <h2>Module 3 — Free conversation</h2>
         <div id="conversation-support">
-            <p>¿Te quedás en blanco? Probá con:</p>
-            <p>Para arrancar: <span id="conversation-starters"></span></p>
-            <p>Conectores: <span id="linking-words"></span></p>
-            <p>Temas: <span id="topic-suggestions"></span></p>
+            <p>Blanking out? Try these:</p>
+            <p>To start: <span id="conversation-starters"></span></p>
+            <p>Linking words: <span id="linking-words"></span></p>
+            <p>Topics: <span id="topic-suggestions"></span></p>
         </div>
-        <button id="record-btn">🎙️ Grabar</button>
+        <button id="record-btn">🎙️ Record</button>
         <p id="transcript"></p>
         <p id="tutor-reply"></p>
         <audio id="tutor-audio" controls></audio>
