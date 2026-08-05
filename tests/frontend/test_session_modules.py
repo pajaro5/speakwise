@@ -62,3 +62,20 @@ def test_app_js_gives_clear_recording_state_feedback() -> None:
     js = _read("app.js")
     assert "disabled = true" in js
     assert "disabled = false" in js
+
+
+def test_app_js_disables_listen_buttons_while_playing_audio() -> None:
+    """El TTS real tarda un poco en generar el audio — el usuario reportó
+    que sigue presionando "Escuchar ejemplos" varias veces porque no ve
+    feedback de que ya está cargando."""
+    js = _read("app.js")
+    assert "btn.disabled = true" in js
+    assert "playTextWithButton(todaysPlan.pattern_focus.family.join(\". \"), listenPatternBtn)" in js
+    assert "playTextWithButton(todaysPlan.chunk_today.chunk, listenChunkBtn)" in js
+
+
+def test_index_html_has_pattern_pronunciation_element() -> None:
+    """El usuario pidió que se muestre cómo pronunciar el patrón (IPA), no
+    solo la regla en español y los ejemplos para escuchar."""
+    html = _read("index.html")
+    assert 'id="pattern-ipa"' in html

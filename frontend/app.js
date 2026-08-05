@@ -6,6 +6,7 @@ const startSessionBtn = document.getElementById("start-session-btn");
 const module1El = document.getElementById("module-1");
 const patternNameEl = document.getElementById("pattern-name");
 const patternRuleEl = document.getElementById("pattern-rule");
+const patternIpaEl = document.getElementById("pattern-ipa");
 const patternFamilyEl = document.getElementById("pattern-family");
 const listenPatternBtn = document.getElementById("listen-pattern-btn");
 const practicePatternBtn = document.getElementById("practice-pattern-btn");
@@ -78,6 +79,15 @@ async function playText(text) {
   await audio.play();
 }
 
+async function playTextWithButton(text, btn) {
+  btn.disabled = true;
+  try {
+    await playText(text);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 async function transcribeAudio(audioBlob) {
   const formData = new FormData();
   formData.append("audio", audioBlob, "audio.webm");
@@ -95,6 +105,7 @@ async function startSession() {
   if (pattern) {
     patternNameEl.textContent = pattern.name;
     patternRuleEl.textContent = pattern.rule_es;
+    patternIpaEl.textContent = pattern.rule_ipa;
     patternFamilyEl.textContent = pattern.family.join(", ");
   }
   const chunk = todaysPlan.chunk_today;
@@ -240,7 +251,7 @@ startSessionBtn.addEventListener("click", () => {
 });
 
 listenPatternBtn.addEventListener("click", () => {
-  playText(todaysPlan.pattern_focus.family.join(". ")).catch((error) => {
+  playTextWithButton(todaysPlan.pattern_focus.family.join(". "), listenPatternBtn).catch((error) => {
     statusEl.textContent = `Error: ${error.message}`;
   });
 });
@@ -250,7 +261,7 @@ practicePatternBtn.addEventListener("click", () => startRecording("pattern"));
 nextToModule2Btn.addEventListener("click", () => showModule(module2El));
 
 listenChunkBtn.addEventListener("click", () => {
-  playText(todaysPlan.chunk_today.chunk).catch((error) => {
+  playTextWithButton(todaysPlan.chunk_today.chunk, listenChunkBtn).catch((error) => {
     statusEl.textContent = `Error: ${error.message}`;
   });
 });

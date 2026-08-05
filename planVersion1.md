@@ -346,6 +346,23 @@ Suite completa: 124/124 (2 de integración deseleccionados).
 
 ---
 
+### Fase 9.3 — 3 observaciones probando módulo 1 (patrón fonético) ✅
+
+El usuario probó módulo 1 tras el fix de Fase 9.2 y reportó 3 problemas concretos, corregidos con TDD:
+
+1. **"Al dar clic en 'Escuchar ejemplos' el botón debe deshabilitarse, tarda un poco y sigo presionando varias veces"** — el TTS real (Kokoro) tarda unos segundos en generar el audio y no había ningún feedback de carga. Arreglado con `playTextWithButton(text, btn)` en `app.js`: deshabilita el botón al hacer clic, lo reactiva en un `finally` cuando `audio.play()` resuelve (arranca la reproducción). Aplicado a los dos botones "Escuchar" (módulo 1 y módulo 2 — mismo bug, mismo código compartido). Test: `test_app_js_disables_listen_buttons_while_playing_audio`.
+   - **Decisión de diseño, con vuelta atrás real:** la primera versión esperaba al evento `ended` (reactivar solo cuando termina de sonar, no solo cuando arranca) para evitar además reproducciones superpuestas. Al verificar en vivo con Claude en Chrome, la pestaña en background (`document.visibilityState === "hidden"`) nunca cargaba los datos del `<audio>` (`readyState` se quedaba en 0 indefinidamente) — el botón quedaba deshabilitado para siempre. Dado que esta app es de uso móvil (PWA), un usuario real bloqueando la pantalla o cambiando de app mientras carga el TTS podría quedar en la misma situación. Se revirtió a la versión más simple y seguro: reactivar en cuanto arranca la reproducción, no cuando termina — resuelve el problema reportado sin el riesgo de un botón roto permanentemente.
+2. **"Quiero que muestre cómo debo pronunciar"** — el patrón solo mostraba la regla en español (que ya incluye el IPA embebido en el texto, ej. "= /ɪdʒ/") y la lista de palabras de ejemplo, sin destacar la pronunciación. `phonetic_patterns.rule_ipa` ya existía en el schema pero `_pattern_of_the_day()` no lo seleccionaba. Arreglado: se agrega `rule_ipa` al contrato de `pattern_focus`, mostrado en negrita como "Pronunciación: **/ʃən/**" en módulo 1. Tests: `test_pattern_of_the_day_cold_start_picks_priority_1` (shape actualizado), `test_index_html_has_pattern_pronunciation_element`.
+3. **"En todas las pruebas siempre iniciamos con lo mismo, age idge, ¿eso es correcto?"** — no del todo. `_pattern_of_the_day()` ordena por `accuracy` (siempre 0.0, sin scoring real hasta ITER-2) y `priority` — como tres patrones comparten `priority = 1`, el desempate era determinista y siempre caía en el mismo (el primero insertado por `seed.py`). `sessions_practiced` se registraba (`pattern_progress.sessions_practiced`) pero no se usaba para ordenar. Arreglado agregando `COALESCE(pp.sessions_practiced, 0) ASC` como criterio de desempate intermedio — mismo patrón que `_chunk_of_the_day()` ya usaba con `spontaneous_uses`. Verificado en la DB real del usuario: con práctica previa registrada para "-age/-idge" (de la sesión real que ya corrió), el patrón del día pasó a ser "-tion/-sion". Test: `test_pattern_of_the_day_prefers_least_practiced`.
+
+`DESIGN.md` actualizado con `rule_ipa` en el contrato de `pattern_focus`.
+
+**Verificado en vivo (Chrome):** IPA visible en pantalla ("Pronunciación: **/ʃən/**"), rotación de patrón confirmada contra la DB real. La verificación del ciclo completo deshabilitar→reproducir→reactivar del botón no pudo confirmarse con certeza vía automatización — la pestaña de Claude en Chrome no queda "visible" (`document.visibilityState`) para la extensión, así que el elemento `<audio>` nunca cargaba datos en ese contexto. El código sigue el patrón estándar (deshabilitar en el click, reactivar en `finally` tras `await audio.play()`) y no depende de nada específico del entorno de test — pendiente de que el usuario lo confirme con uso real.
+
+Suite completa: 127/127 (2 de integración deseleccionados).
+
+---
+
 ### Fase 10 — Cierre de v1
 
 - Checklist completo de `DEFINITION-OF-DONE.md` (global + por feature de esta iteración)

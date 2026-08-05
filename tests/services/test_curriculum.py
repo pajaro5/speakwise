@@ -3,7 +3,7 @@ import sqlite3
 import pytest
 
 from backend import seed
-from backend.database import db_connection
+from backend.database import db_connection, upsert_pattern_progress
 from backend.services.curriculum import (
     _chunk_of_the_day,
     _difficulty,
@@ -72,9 +72,24 @@ def test_pattern_of_the_day_cold_start_picks_priority_1(seeded_db_path: str) -> 
         pattern = _pattern_of_the_day(conn)
 
     assert pattern is not None
-    assert set(pattern.keys()) == {"id", "name", "rule_es", "family"}
+    assert set(pattern.keys()) == {"id", "name", "rule_es", "rule_ipa", "family"}
     assert isinstance(pattern["family"], list)
     assert isinstance(pattern["id"], int)
+
+
+def test_pattern_of_the_day_prefers_least_practiced(seeded_db_path: str) -> None:
+    """Reportado por el usuario: "en todas las pruebas siempre iniciamos con
+    lo mismo, age idge, eso es correcto?" — no lo era del todo: sin scoring
+    real de precisión (eso es ITER-2), el mismo patrón de prioridad 1 se
+    repetía siempre porque sessions_practiced no influía en el orden."""
+    with db_connection(seeded_db_path) as conn:
+        first_pick = _pattern_of_the_day(conn)
+        for _ in range(3):
+            upsert_pattern_progress(conn, pattern_id=first_pick["id"])
+
+        second_pick = _pattern_of_the_day(conn)
+
+    assert second_pick["id"] != first_pick["id"]
 
 
 def test_pattern_of_the_day_excludes_mastered_stage_4(seeded_db_path: str) -> None:

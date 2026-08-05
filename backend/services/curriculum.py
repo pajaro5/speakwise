@@ -65,11 +65,13 @@ def _forms_to_review(
 def _pattern_of_the_day(conn: sqlite3.Connection) -> dict | None:
     row = conn.execute(
         """
-        SELECT p.id, p.name, p.rule_es, p.family
+        SELECT p.id, p.name, p.rule_es, p.rule_ipa, p.family
         FROM phonetic_patterns p
         LEFT JOIN pattern_progress pp ON pp.pattern_id = p.id
         WHERE pp.stage IS NULL OR pp.stage < 4
-        ORDER BY COALESCE(pp.accuracy, 0.0) ASC, p.priority ASC
+        ORDER BY COALESCE(pp.accuracy, 0.0) ASC,
+                 COALESCE(pp.sessions_practiced, 0) ASC,
+                 p.priority ASC
         LIMIT 1
         """
     ).fetchone()
@@ -79,6 +81,7 @@ def _pattern_of_the_day(conn: sqlite3.Connection) -> dict | None:
         "id": row["id"],
         "name": row["name"],
         "rule_es": row["rule_es"],
+        "rule_ipa": row["rule_ipa"],
         "family": json.loads(row["family"]),
     }
 

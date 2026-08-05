@@ -333,6 +333,7 @@ Llamar esto al empezar la sesión, y pasar el `session_id` devuelto a `/api/tuto
     "id": 3,
     "name": "-age/-idge",
     "rule_es": "Termina en -age = /ɪdʒ/, la E no suena",
+    "rule_ipa": "/ɪdʒ/",
     "family": ["average", "manage", "village"]
   },
   "chunk_today": {
