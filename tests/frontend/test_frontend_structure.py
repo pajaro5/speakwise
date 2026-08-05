@@ -22,15 +22,11 @@ def test_index_html_has_mobile_viewport() -> None:
     assert 'name="viewport"' in html
 
 
-def test_index_html_has_transcript_and_reply_display_areas() -> None:
+def test_index_html_has_chat_log_area() -> None:
+    """Módulo 3 rediseñado como chat (estilo WhatsApp): cada turno agrega
+    una burbuja al log en vez de pisar un solo elemento de texto fijo."""
     html = _read("index.html")
-    assert 'id="transcript"' in html
-    assert 'id="tutor-reply"' in html
-
-
-def test_index_html_has_audio_playback_element() -> None:
-    html = _read("index.html")
-    assert 'id="tutor-audio"' in html
+    assert 'id="chat-log"' in html
 
 
 def test_app_js_uses_media_recorder_api() -> None:

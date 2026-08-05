@@ -452,6 +452,18 @@ Suite completa: 147/147 (2 de integración deseleccionados).
 
 ---
 
+### Fase 9.9 — Módulo 3 rediseñado como chat estilo WhatsApp ✅
+
+El usuario pidió que módulo 3 (conversación libre) tenga look and feel de chat: grabar, ver la respuesta, y que la conversación avance hacia abajo — no un solo par de elementos de texto que se pisan en cada turno (comportamiento anterior desde Fase 6/7).
+
+**Frontend (TDD estructural):** `index.html` — `#transcript`/`#tutor-reply`/`#tutor-audio` (fijos) reemplazados por `#chat-log` (contenedor scrolleable). `app.js` — `appendChatMessage(text, sender, audioUrl)` crea una burbuja (`div.chat-bubble.chat-user` o `.chat-tutor`), la agrega al log y hace scroll automático al final (`chatLogEl.scrollTop = chatLogEl.scrollHeight`); `handleFreeConversationRecording()` ahora agrega una burbuja de usuario tras transcribir y una del tutor (con su audio adjunto) tras la respuesta, en vez de pisar `transcriptEl`/`tutorReplyEl`. CSS estilo WhatsApp: fondo beige del chat, burbujas verdes alineadas a la derecha (usuario), blancas a la izquierda (tutor). Tests: `test_index_html_has_chat_log_area` (reemplaza los tests viejos de `#transcript`/`#tutor-reply`/`#tutor-audio`), `test_app_js_free_conversation_renders_chat_bubbles`.
+
+**Verificado en vivo (Chrome):** burbujas renderizadas correctamente (verde/usuario a la derecha, blanco/tutor a la izquierda), scroll automático confirmado forzando overflow (`scrollTop + clientHeight >= scrollHeight` tras agregar mensajes).
+
+Suite completa: 147/147 (2 de integración deseleccionados).
+
+---
+
 ### Fase 10 — Cierre de v1
 
 - Checklist completo de `DEFINITION-OF-DONE.md` (global + por feature de esta iteración)

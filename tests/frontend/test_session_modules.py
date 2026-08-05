@@ -180,3 +180,16 @@ def test_app_js_chunk_recording_requires_retry_when_not_detected() -> None:
         "nextToModule3Btn.classList.remove"
     )
     assert "again" in handler.lower()
+
+
+def test_app_js_free_conversation_renders_chat_bubbles() -> None:
+    """El usuario pidió que módulo 3 sea tipo chat (WhatsApp): cada grabación
+    agrega una burbuja de usuario y otra del tutor al log, con scroll
+    automático hacia abajo, en vez de pisar un solo elemento de texto."""
+    js = _read("app.js")
+    assert "appendChatMessage" in js
+    assert "chatLogEl.scrollTop = chatLogEl.scrollHeight" in js
+    handler = js.split("async function handleFreeConversationRecording")[1]
+    handler = handler.split("if (\"serviceWorker\"")[0]
+    assert 'appendChatMessage(transcript.text, "user")' in handler
+    assert '"tutor"' in handler

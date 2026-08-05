@@ -29,9 +29,7 @@ const conversationStartersEl = document.getElementById("conversation-starters");
 const linkingWordsEl = document.getElementById("linking-words");
 const topicSuggestionsEl = document.getElementById("topic-suggestions");
 const recordBtn = document.getElementById("record-btn");
-const transcriptEl = document.getElementById("transcript");
-const tutorReplyEl = document.getElementById("tutor-reply");
-const tutorAudioEl = document.getElementById("tutor-audio");
+const chatLogEl = document.getElementById("chat-log");
 
 let sessionId = null;
 let todaysPlan = null;
@@ -279,25 +277,41 @@ async function handleChunkRecording(audioBlob) {
   statusEl.textContent = "";
 }
 
+function appendChatMessage(text, sender, audioUrl) {
+  const bubble = document.createElement("div");
+  bubble.className = `chat-bubble chat-${sender}`;
+  const textEl = document.createElement("p");
+  textEl.textContent = text;
+  bubble.appendChild(textEl);
+  if (audioUrl) {
+    const audio = document.createElement("audio");
+    audio.controls = true;
+    audio.src = audioUrl;
+    bubble.appendChild(audio);
+  }
+  chatLogEl.appendChild(bubble);
+  chatLogEl.scrollTop = chatLogEl.scrollHeight;
+  return bubble;
+}
+
 async function handleFreeConversationRecording(audioBlob) {
   statusEl.textContent = "Transcribing...";
   const transcript = await transcribeAudio(audioBlob);
-  transcriptEl.textContent = transcript.text;
+  appendChatMessage(transcript.text, "user");
 
   statusEl.textContent = "Thinking...";
   const tutor = await postJson("/api/tutor", {
     text: transcript.text, history, session_id: sessionId,
     wpm: transcript.wpm, fillers: transcript.fillers,
   });
-  tutorReplyEl.textContent = tutor.reply;
   sessionId = tutor.session_id;
   history.push({ role: "user", content: transcript.text });
   history.push({ role: "assistant", content: tutor.reply });
 
   statusEl.textContent = "Generating audio...";
   const audioUrl = await speak(tutor.reply);
-  tutorAudioEl.src = audioUrl;
-  tutorAudioEl.play();
+  const tutorBubble = appendChatMessage(tutor.reply, "tutor", audioUrl);
+  tutorBubble.querySelector("audio").play();
   statusEl.textContent = "Done.";
 }
 
