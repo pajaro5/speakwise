@@ -11,11 +11,12 @@
 ```
 BACKLOG              │ EN PROGRESO │ EN USO (probando) │ HECHO
 ─────────────────────┼─────────────┼───────────────────┼───────
-ITER-2: Acústico     │ ITER-1      │                   │
-ITER-3: Worksheet    │             │                   │
+ITER-3: Worksheet    │ ITER-2      │ ITER-1             │
 ITER-4: Panel apoyo  │             │                   │
 ITER-5: Auto-ajuste  │             │                   │
 ```
+
+ITER-1 pasó a "En uso" — código completo y verificado en vivo módulo por módulo, falta el uso real de varios días seguidos que pide su propio criterio de "Hecho". ITER-2 arrancó: stress detection (Parselmouth) construido y verificado en vivo end-to-end; phoneme_errors/pattern_errors/integración con el tutor/EVAL-01/EVAL-03 quedan pendientes (detalle en la sección de ITER-2).
 
 > La columna "En uso" existe porque yo soy el usuario. Antes de mover algo a "Hecho", lo uso en al menos 3 sesiones reales. Si algo no funciona en la práctica diaria, no está hecho.
 
@@ -79,23 +80,31 @@ ITER-5: Auto-ajuste  │             │                   │
 
 ### Tasks
 
-- [ ] **acoustic.py** — Integrar Parselmouth para pitch + energy por palabra
+- [x] **acoustic.py** — Integrar Parselmouth para pitch + energy por palabra
   - DoD: `stress_results` en respuesta de /transcribe con `correct: bool` por frase
+  - Estado: hecho y verificado en vivo contra servicios reales (no solo tests). `services/stress.py` (nuevo): `load_waveform()` decodifica el audio real del navegador (webm/opus) vía librosa/ffmpeg; `detect_stress_syllable()` divide la palabra en N sílabas (según CMU dict) y usa el **pico** de intensidad por sílaba (Parselmouth) como proxy de sílaba tónica — no hay alineación fonémica real, es una heurística de mínimo esfuerzo. `POST /api/transcribe` acepta `target_words` opcional (form field) y devuelve `stress_results`. Conectado a módulo 1: manda las palabras de la familia del patrón, muestra "Stress correct on N/M words" en vez de "Practiced!" genérico, y `pattern_progress.accuracy` ahora se actualiza de verdad (antes quedaba en 0.0 para siempre — esto además activa la rotación de patrones por `sessions_practiced`/`accuracy` ya implementada en Fase 9.3). **Hallazgo real probando en vivo**: la primera versión (promedio de intensidad por sílaba) tenía sesgo sistemático hacia sílabas posteriores — cambiado a **pico** de intensidad, mejora consistente en las pruebas contra TTS real pero **la precisión real contra voz humana no está validada, eso es EVAL-01**.
+  - `phoneme_log` poblado con los intentos incorrectos (no todos, solo "errores reales" per el DoD de esa task) vía `log_stress_results()`.
 
 - [ ] **acoustic.py** — Comparación fonémica WhisperX vs. CMU Dict
   - DoD: `phoneme_errors` incluye `{word, expected, produced}` por turno
+  - Estado: no construido. Requiere un reconocedor de fonemas real (el STT actual solo da texto, no fonemas producidos) — Whisper suele "autocorregir" pronunciaciones imperfectas al transcribir la palabra correcta, así que comparar el texto transcripto contra el esperado no detecta desviaciones fonéticas sutiles. Necesitaría un modelo de reconocimiento fonético dedicado (ej. wav2vec2 vía CTC a fonemas), dependencia pesada nueva — no evaluado si corre bien en el hardware del usuario (mismo tipo de restricción que descartó Ollama 7B). Pendiente de decisión.
 
 - [ ] **patterns.py** — Detección de patrones fonéticos en errores
   - DoD: si produzco 3+ errores de -age/-idge, `pattern_errors` lo reporta
+  - Estado: no construido como `pattern_errors` explícito en la respuesta — pero el dato equivalente ya vive en `pattern_progress.accuracy`/`sessions_practiced` por patrón, que sí es real y se actualiza. Falta la agregación puntual "en esta sesión, X errores de este patrón" si hace falta mostrarla en algún lado.
 
-- [ ] **phoneme_log** — Poblar tabla con cada error por sesión
+- [x] **phoneme_log** — Poblar tabla con cada error por sesión
   - DoD: después de una sesión, `SELECT * FROM phoneme_log WHERE session_id = ?` muestra errores reales
+  - Estado: hecho — ver arriba (`log_stress_results()`), verificado con test dedicado.
 
 - [ ] **Feedback de Claude** — Actualizar system prompt para usar `phoneme_errors` y `stress_results`
   - DoD: EVAL-03 pasa con promedio ≥ 4.0
+  - Estado: no construido. `stress_results` hoy solo se usa en módulo 1 (feedback de UI simple, no vía el tutor/LLM). Integrarlo al tutor tendría sentido para módulo 3, pero conversación libre no manda `target_words` a `/api/transcribe` todavía — necesitaría decidir qué palabras chequear ahí (¿las de la semana? ¿cualquiera del corpus?).
 
 - [ ] **EVAL-01** — Correr con 20 grabaciones de prueba
+  - Estado: pendiente — necesita la voz real del usuario, no se puede correr sin él (mismo patrón que EVAL-06). Es la validación real de si el proxy de pico-de-intensidad sirve o hace falta ajustarlo más.
 - [ ] **EVAL-03** — Correr con 10 transcripciones de prueba
+  - Estado: pendiente — depende del feedback del tutor con `stress_results`/`phoneme_errors`, que todavía no está integrado.
 
 **Criterio de "Hecho":** EVAL-01 + EVAL-03 pasan + 1 semana de uso donde el feedback fonético se siente preciso.
 

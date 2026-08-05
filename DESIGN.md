@@ -234,27 +234,23 @@ CREATE INDEX idx_pattern_stage    ON pattern_progress(stage, accuracy);
 ### POST /api/transcribe
 
 ```json
-// Request: multipart/form-data  { "audio": file.webm }
+// Request: multipart/form-data  { "audio": file.webm, "target_words": "average,manage" }
+// target_words es opcional (string separado por comas) — ITER-2, módulo 1 lo usa
+// para pedir análisis de sílaba tónica de las palabras del patrón del día.
 
-// Response (MVP)
+// Response
 {
   "text": "I was thinking maybe we could average the results",
   "wpm": 94.3,
   "fillers": 0,
-  "words": [{"w": "average", "start": 2.1, "end": 2.8}]
-}
-
-// Response (V2 — agrega análisis acústico)
-{
-  "text": "...",
-  "wpm": 94.3,
-  "fillers": 0,
-  "words": [...],
-  "stress_results": [{"word": "average", "expected_syl": 0, "detected_syl": 1, "correct": false}],
-  "phoneme_errors": [{"word": "average", "expected": "AE1", "produced": "AH1"}],
-  "pattern_errors": {"-age/-idge": 1}
+  "words": [{"w": "average", "start": 2.1, "end": 2.8}],
+  "stress_results": [{"word": "average", "expected_syl": 0, "detected_syl": 1, "correct": false}]
 }
 ```
+
+`stress_results` (ITER-2, `services/stress.py`) solo se calcula si se manda `target_words`, y solo incluye las palabras objetivo que aparecen en la transcripción y tienen ≥2 sílabas según CMU dict. `expected_syl` sale de CMU dict (índice de la vocal con acento primario); `detected_syl` es el índice de la sílaba (dividiendo el audio en N partes iguales según cantidad de sílabas) con mayor **pico** de intensidad (Parselmouth) — un proxy simple, no alineación fonémica real. Precisión real contra voz humana sin validar (pendiente EVAL-01).
+
+`phoneme_errors`/`pattern_errors` (documentados originalmente acá) **no están construidos** — requieren un reconocedor de fonemas real (el STT solo da texto) o una decisión de scope distinta. Ver `BACKLOG.md` ITER-2 para el detalle de qué falta.
 
 ### POST /api/tutor
 
@@ -377,15 +373,17 @@ Audio → Whisper API → { text, word_timestamps }
       → calcular WPM y fillers desde timestamps
 ```
 
-**V2 (WhisperX + Parselmouth):**
+**V2 — implementado (ITER-2, `services/stress.py`):**
 ```
-Audio → WhisperX → { text, word_timestamps, phoneme_timestamps }
-      → CMU Dict  → fonemas esperados por palabra
-      → diff      → phoneme_errors[]
-      → librosa + Parselmouth → energy/pitch por palabra
-      → comparar con CMU stress marker → stress_results[]
-      → agrupar errores por patrón → pattern_errors{}
+Audio → faster-whisper (STT_PROVIDER=whisperx_local) → { text, word_timestamps }
+      → si hay target_words:
+          librosa/ffmpeg → waveform decodificado
+          CMU Dict → sílaba esperada (vocal con acento primario)
+          Parselmouth → pico de intensidad por sílaba (audio dividido en N partes iguales)
+          comparar → stress_results[]
 ```
+
+**V2 — no implementado:** `phoneme_timestamps`/alineación fonémica real (WhisperX de verdad, no solo faster-whisper) y `phoneme_errors`/`pattern_errors` — requieren un reconocedor de fonemas dedicado que el STT actual no provee (solo da texto). Ver `BACKLOG.md` ITER-2.
 
 ---
 
@@ -485,3 +483,4 @@ class LLMProvider(ABC):
 | 1.5 | Ago 2026 | Ollama+Qwen removido de `docker-compose.yml` y como default de LLM — la PC de desarrollo no soporta correr un modelo de 7B. Nuevo default de LLM: DeepSeek (paga, más económica). El provider `llm_ollama.py` queda en el código, disponible por env var para uso futuro en otra máquina. |
 | 1.6 | Ago 2026 | Fase 6 de planVersion1.md: agregados contratos de `POST /api/tutor` y `POST /api/speak` (no estaban especificados con ejemplo). `session_id` en `/tutor` decide crear vs actualizar la fila de `sessions`. |
 | 1.7 | Ago 2026 | Fase 9 de planVersion1.md (parte 1, backend): agregado `POST /api/session/start` (no estaba en el árbol original de endpoints) y definido el contrato de `POST /api/log` (antes solo el nombre). Agregado `services/log.py` y `services/tutor.py` al árbol de archivos. |
+| 1.8 | Ago 2026 | ITER-2 (planVersion2.md): implementado stress detection real (`services/stress.py`) — `POST /api/transcribe` gana `target_words` (request) y `stress_results` (response). Corregido el pipeline V2 documentado: no hay alineación fonémica real (WhisperX de verdad), es faster-whisper + Parselmouth con una heurística de pico de intensidad por sílaba. `phoneme_errors`/`pattern_errors` quedan sin implementar — requieren un reconocedor de fonemas que no existe en el stack actual. |

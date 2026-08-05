@@ -90,9 +90,12 @@ async function playTextWithButton(text, btn) {
   }
 }
 
-async function transcribeAudio(audioBlob) {
+async function transcribeAudio(audioBlob, targetWords) {
   const formData = new FormData();
   formData.append("audio", audioBlob, "audio.webm");
+  if (targetWords && targetWords.length) {
+    formData.append("target_words", targetWords.join(","));
+  }
   const response = await fetch("/api/transcribe", { method: "POST", body: formData });
   return parseJsonOrThrow(response);
 }
@@ -249,13 +252,21 @@ async function loadChunkExamples() {
 
 async function handlePatternRecording(audioBlob) {
   statusEl.textContent = "Transcribing...";
-  await transcribeAudio(audioBlob); // just confirms something was recorded, no scoring yet
+  const targetWords = todaysPlan.pattern_focus.family.map(stripMarkup);
+  const transcript = await transcribeAudio(audioBlob, targetWords);
   await postJson("/api/log", {
     session_id: sessionId,
     event: "pattern_practiced",
     pattern_id: todaysPlan.pattern_focus.id,
+    stress_results: transcript.stress_results,
   });
-  statusEl.textContent = "Practiced!";
+  const results = transcript.stress_results || [];
+  if (results.length) {
+    const correct = results.filter((r) => r.correct).length;
+    statusEl.textContent = `Stress correct on ${correct}/${results.length} word(s) — keep practicing!`;
+  } else {
+    statusEl.textContent = "Practiced!";
+  }
   nextToModule2Btn.classList.remove("hidden");
 }
 

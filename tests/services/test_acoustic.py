@@ -88,6 +88,43 @@ async def test_transcribe_and_analyze_handles_empty_transcription() -> None:
 
 
 @pytest.mark.asyncio
+async def test_transcribe_and_analyze_computes_stress_results_when_target_words_given(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    raw_words = [{"w": "average", "start": 0.0, "end": 1.0}]
+    fake_transcript = Transcript(text="average", wpm=0.0, words=raw_words, fillers=0)
+    provider = _FakeSTTProvider(fake_transcript)
+
+    monkeypatch.setattr(
+        "backend.services.acoustic.load_waveform", lambda audio: ("FAKE_WAVE", 16000)
+    )
+    monkeypatch.setattr(
+        "backend.services.acoustic.analyze_stress",
+        lambda waveform, sr, words, target_words: [
+            {"word": "average", "expected_syl": 0, "detected_syl": 0, "correct": True}
+        ],
+    )
+
+    result = await transcribe_and_analyze(
+        b"fake-webm-audio", provider=provider, target_words=["average"]
+    )
+
+    assert result.stress_results == [
+        {"word": "average", "expected_syl": 0, "detected_syl": 0, "correct": True}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_transcribe_and_analyze_skips_stress_analysis_without_target_words() -> None:
+    fake_transcript = Transcript(text="hello", wpm=0.0, words=[], fillers=0)
+    provider = _FakeSTTProvider(fake_transcript)
+
+    result = await transcribe_and_analyze(b"fake-audio", provider=provider)
+
+    assert result.stress_results == []
+
+
+@pytest.mark.asyncio
 async def test_transcribe_and_analyze_uses_factory_provider_by_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

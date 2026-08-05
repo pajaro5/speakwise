@@ -55,8 +55,9 @@ def test_transcribe_returns_200_with_contract_shape(client) -> None:
 
     assert response.status_code == 200
     body = response.json()
-    assert set(body.keys()) == {"text", "wpm", "fillers", "words"}
+    assert set(body.keys()) == {"text", "wpm", "fillers", "words", "stress_results"}
     assert body["text"] == "I go"
+    assert body["stress_results"] == []
 
 
 def test_transcribe_without_audio_returns_422(client) -> None:
@@ -64,6 +65,37 @@ def test_transcribe_without_audio_returns_422(client) -> None:
     response = test_client.post("/api/transcribe")
 
     assert response.status_code == 422
+
+
+def test_transcribe_with_target_words_returns_stress_results(client, tmp_path) -> None:
+    """ITER-2: si se pasan target_words, /api/transcribe analiza la sílaba
+    tónica de esas palabras con audio real (no puede ser el fake de arriba,
+    necesita decodificarse de verdad)."""
+    import subprocess
+
+    import numpy as np
+    import soundfile as sf
+
+    test_client, _ = client
+    sr = 16000
+    t = np.linspace(0, 1.0, sr, endpoint=False)
+    tone = (np.sin(2 * np.pi * 200 * t) * 0.5).astype("float32")
+    wav_path = tmp_path / "tone.wav"
+    webm_path = tmp_path / "tone.webm"
+    sf.write(wav_path, tone, sr)
+    subprocess.run(
+        ["ffmpeg", "-y", "-i", str(wav_path), "-c:a", "libopus", str(webm_path)],
+        check=True, capture_output=True,
+    )
+
+    response = test_client.post(
+        "/api/transcribe",
+        files={"audio": ("audio.webm", webm_path.read_bytes(), "audio/webm")},
+        data={"target_words": "average,manage"},
+    )
+
+    assert response.status_code == 200
+    assert "stress_results" in response.json()
 
 
 def test_speak_returns_200_with_audio_bytes(client) -> None:

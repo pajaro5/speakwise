@@ -193,3 +193,17 @@ def test_app_js_free_conversation_renders_chat_bubbles() -> None:
     handler = handler.split("if (\"serviceWorker\"")[0]
     assert 'appendChatMessage(transcript.text, "user")' in handler
     assert '"tutor"' in handler
+
+
+def test_app_js_pattern_recording_sends_target_words_and_reports_stress(
+) -> None:
+    """ITER-2: módulo 1 manda las palabras de la familia del patrón como
+    target_words a /api/transcribe y usa stress_results real en vez del
+    "Practiced!" genérico de siempre."""
+    js = _read("app.js")
+    handler = js.split("async function handlePatternRecording")[1]
+    handler = handler.split("async function handleChunkRecording")[0]
+    assert "todaysPlan.pattern_focus.family.map(stripMarkup)" in handler
+    assert "transcribeAudio(audioBlob, targetWords)" in handler
+    assert "stress_results: transcript.stress_results" in handler
+    assert "results.filter" in handler

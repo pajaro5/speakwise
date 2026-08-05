@@ -177,25 +177,44 @@ def update_session(
     conn.commit()
 
 
-def upsert_pattern_progress(conn: sqlite3.Connection, pattern_id: int) -> None:
-    """Registra una práctica del patrón fonético. Sin scoring de precisión todavía
-    (eso es ITER-2, requiere análisis de fonemas) — solo cuenta exposición."""
+def upsert_pattern_progress(
+    conn: sqlite3.Connection,
+    pattern_id: int,
+    *,
+    correct: int | None = None,
+    total: int | None = None,
+) -> None:
+    """Registra una práctica del patrón fonético.
+
+    `correct`/`total` (ITER-2, opcional): resultado del análisis acústico de
+    sílaba tónica de este intento (services/stress.py). Sin esos datos solo
+    se cuenta exposición, igual que antes. Con ellos, `accuracy` se actualiza
+    como el promedio acumulado de la proporción correct/total de cada intento.
+    """
     today = date.today().isoformat()
     existing = conn.execute(
-        "SELECT id, sessions_practiced FROM pattern_progress WHERE pattern_id = ?",
+        "SELECT id, sessions_practiced, accuracy FROM pattern_progress WHERE pattern_id = ?",
         (pattern_id,),
     ).fetchone()
+    attempt_accuracy = (correct / total) if total else None
+
     if existing:
+        new_sessions = existing["sessions_practiced"] + 1
+        new_accuracy = existing["accuracy"]
+        if attempt_accuracy is not None:
+            new_accuracy = (
+                existing["accuracy"] * existing["sessions_practiced"] + attempt_accuracy
+            ) / new_sessions
         conn.execute(
-            "UPDATE pattern_progress SET sessions_practiced = ?, last_seen = ? "
-            "WHERE id = ?",
-            (existing["sessions_practiced"] + 1, today, existing["id"]),
+            "UPDATE pattern_progress SET sessions_practiced = ?, accuracy = ?, "
+            "last_seen = ? WHERE id = ?",
+            (new_sessions, new_accuracy, today, existing["id"]),
         )
     else:
         conn.execute(
-            "INSERT INTO pattern_progress (pattern_id, stage, sessions_practiced, last_seen) "
-            "VALUES (?, 1, 1, ?)",
-            (pattern_id, today),
+            "INSERT INTO pattern_progress (pattern_id, stage, sessions_practiced, "
+            "accuracy, last_seen) VALUES (?, 1, 1, ?, ?)",
+            (pattern_id, attempt_accuracy or 0.0, today),
         )
     conn.commit()
 
@@ -207,4 +226,28 @@ def mark_chunk_used(
         "UPDATE sessions SET chunk_used = ?, chunk_produced = ? WHERE id = ?",
         (chunk, int(produced), session_id),
     )
+    conn.commit()
+
+
+def log_stress_results(
+    conn: sqlite3.Connection, session_id: int, stress_results: list[dict]
+) -> None:
+    """Guarda solo los intentos incorrectos (errores reales) — services/stress.py
+    ya calcula expected_syl/detected_syl, no un fonema alternativo real, así
+    que phoneme_exp/phoneme_got describen la sílaba tónica esperada vs. la
+    detectada acústicamente, no una sustitución fonémica completa (eso
+    requeriría un reconocedor de fonemas, no solo comparar timestamps)."""
+    for r in stress_results:
+        if r["correct"]:
+            continue
+        conn.execute(
+            "INSERT INTO phoneme_log (session_id, word, phoneme_exp, phoneme_got, correct) "
+            "VALUES (?, ?, ?, ?, 0)",
+            (
+                session_id,
+                r["word"],
+                f"stress@syllable_{r['expected_syl']}",
+                f"stress@syllable_{r['detected_syl']}",
+            ),
+        )
     conn.commit()

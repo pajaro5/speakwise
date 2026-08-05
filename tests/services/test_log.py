@@ -25,6 +25,32 @@ def test_log_pattern_practiced_creates_progress_row(db_path: str) -> None:
     assert row["sessions_practiced"] == 1
 
 
+def test_log_pattern_practiced_updates_accuracy_from_stress_results(db_path: str) -> None:
+    """ITER-2: si se pasan stress_results (del análisis acústico de
+    /api/transcribe), pattern_progress.accuracy refleja el resultado real
+    en vez de quedar en 0.0 para siempre."""
+    with db_connection(db_path) as conn:
+        conn.execute(
+            "INSERT INTO phonetic_patterns (id, name, priority) VALUES (1, '-age/-idge', 1)"
+        )
+        conn.commit()
+
+        log_pattern_practiced(
+            conn,
+            pattern_id=1,
+            stress_results=[
+                {"word": "average", "expected_syl": 0, "detected_syl": 0, "correct": True},
+                {"word": "manage", "expected_syl": 0, "detected_syl": 1, "correct": False},
+            ],
+        )
+
+        row = conn.execute(
+            "SELECT accuracy FROM pattern_progress WHERE pattern_id = 1"
+        ).fetchone()
+
+    assert row["accuracy"] == pytest.approx(0.5)
+
+
 def test_log_chunk_used_marks_produced_when_chunk_in_transcript(db_path: str) -> None:
     from backend.database import create_session
 

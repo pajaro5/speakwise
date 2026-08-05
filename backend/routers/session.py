@@ -2,7 +2,7 @@ import sqlite3
 from datetime import date
 from typing import Literal
 
-from fastapi import APIRouter, Depends, File, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Response, UploadFile
 from pydantic import BaseModel
 
 from backend.database import create_session, get_db
@@ -45,6 +45,7 @@ class LogRequest(BaseModel):
     pattern_id: int | None = None
     chunk: str | None = None
     transcript: str | None = None
+    stress_results: list[dict] | None = None
 
 
 @router.post("/session/start")
@@ -61,15 +62,18 @@ async def post_session_start(
 @router.post("/transcribe")
 async def post_transcribe(
     audio: UploadFile = File(...),
+    target_words: str = Form(""),
     stt: STTProvider = Depends(get_stt_provider),
 ) -> dict:
     audio_bytes = await audio.read()
-    transcript = await transcribe_and_analyze(audio_bytes, provider=stt)
+    words = [w.strip() for w in target_words.split(",") if w.strip()]
+    transcript = await transcribe_and_analyze(audio_bytes, provider=stt, target_words=words)
     return {
         "text": transcript.text,
         "wpm": transcript.wpm,
         "fillers": transcript.fillers,
         "words": transcript.words,
+        "stress_results": transcript.stress_results,
     }
 
 
@@ -107,4 +111,5 @@ async def post_log(body: LogRequest, db: sqlite3.Connection = Depends(get_db)) -
     return handle_log_event(
         db, session_id=body.session_id, event=body.event,
         pattern_id=body.pattern_id, chunk=body.chunk, transcript=body.transcript,
+        stress_results=body.stress_results,
     )
