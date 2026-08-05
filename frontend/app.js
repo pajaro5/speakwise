@@ -192,6 +192,20 @@ async function handleRecordingStop() {
   }
 }
 
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function boldChunkOccurrences(text, chunk) {
+  const escapedText = escapeHtml(text);
+  const chunkCore = chunk.trim().replace(/[.!?]+$/, "");
+  const escapedChunk = escapeHtml(chunkCore).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (!escapedChunk) return escapedText;
+  return escapedText.replace(new RegExp(escapedChunk, "gi"), (match) => `<strong>${match}</strong>`);
+}
+
 async function loadChunkExamples() {
   chunkExamplesStatusEl.textContent = "Cargando ejemplos...";
   try {
@@ -199,9 +213,10 @@ async function loadChunkExamples() {
       chunk: todaysPlan.chunk_today.chunk,
       function: todaysPlan.chunk_today.function,
     });
-    chunkExampleSentenceEl.textContent = examples.sentence;
-    chunkExampleParagraphEl.textContent = examples.paragraph;
-    chunkExampleConversationEl.textContent = examples.conversation;
+    const chunk = todaysPlan.chunk_today.chunk;
+    chunkExampleSentenceEl.innerHTML = boldChunkOccurrences(examples.sentence, chunk);
+    chunkExampleParagraphEl.innerHTML = boldChunkOccurrences(examples.paragraph, chunk);
+    chunkExampleConversationEl.innerHTML = boldChunkOccurrences(examples.conversation, chunk);
     chunkExamplesStatusEl.textContent = "";
   } catch (error) {
     chunkExamplesStatusEl.textContent = `No se pudieron cargar los ejemplos: ${error.message}`;

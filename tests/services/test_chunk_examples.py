@@ -65,3 +65,28 @@ async def test_get_chunk_examples_raises_when_a_field_is_missing() -> None:
 
     with pytest.raises(ProviderUnavailableError):
         await get_chunk_examples(llm, chunk="Be careful with that.", function="imperative")
+
+
+def test_system_prompt_forbids_spanish() -> None:
+    """Reportado por el usuario: "todo debe estar en inglés" — el prompt ya
+    pedía inglés pero no era explícito en prohibir mezclar español."""
+    from backend.services.chunk_examples import SYSTEM_PROMPT
+
+    assert "español" in SYSTEM_PROMPT.lower()
+
+
+@pytest.mark.asyncio
+async def test_get_chunk_examples_normalizes_escaped_newlines() -> None:
+    """Reportado por el usuario: en el ejemplo de conversación se veía el
+    backslash-n literal en vez de un salto de línea real — el LLM a veces
+    devuelve el JSON con el backslash doblado ("\\\\n" en vez de "\\n")."""
+    raw = (
+        '{"sentence": "s", "paragraph": "p", '
+        '"conversation": "A: hi.\\\\nB: hi."}'
+    )
+    llm = _CapturingLLM(raw)
+
+    examples = await get_chunk_examples(llm, chunk="hi", function="greeting")
+
+    assert "\\n" not in examples["conversation"]
+    assert "\n" in examples["conversation"]

@@ -95,3 +95,40 @@ def test_index_html_has_chunk_examples_elements() -> None:
 def test_app_js_loads_chunk_examples_when_entering_module_2() -> None:
     js = _read("app.js")
     assert '"/api/chunk-examples"' in js
+
+
+def test_index_html_chunk_examples_use_icons_not_spanish_labels() -> None:
+    """El usuario pidió íconos en vez de texto para oración simple/párrafo/
+    conversación."""
+    html = _read("index.html")
+    assert "✏️" in html
+    assert "📄" in html
+    assert "💬" in html
+    assert "Oración simple:" not in html
+    assert "Párrafo:" not in html
+    assert "Conversación:" not in html
+
+
+def test_index_html_chunk_text_is_always_bold() -> None:
+    """El usuario pidió que el chunk del día siempre aparezca en negrita."""
+    html = _read("index.html")
+    assert '<strong id="chunk-text">' in html
+
+
+def test_app_js_bolds_chunk_occurrences_inside_examples() -> None:
+    """El chunk debe verse en negrita también dentro de los 3 ejemplos
+    generados, no solo en el display principal."""
+    js = _read("app.js")
+    assert "boldChunkOccurrences" in js
+    assert "chunkExampleSentenceEl.innerHTML" in js
+    assert "chunkExampleParagraphEl.innerHTML" in js
+    assert "chunkExampleConversationEl.innerHTML" in js
+
+
+def test_app_js_bolding_ignores_trailing_punctuation() -> None:
+    """Verificado en vivo: el LLM a veces sigue la oración después del chunk
+    ("Be careful with that glass vase...") sin el punto final, y el match
+    exacto fallaba en resaltarlo. Hay que ignorar puntuación final del chunk
+    al buscar coincidencias."""
+    js = _read("app.js")
+    assert "[.!?]+$" in js

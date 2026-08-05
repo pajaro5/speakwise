@@ -9,7 +9,9 @@ SYSTEM_PROMPT = (
     "gramatical, generá 3 ejemplos de uso EN INGLÉS: 1) una oración simple que use el "
     "chunk, 2) un párrafo corto (2-3 oraciones) que lo use naturalmente en contexto, "
     "3) un mini-diálogo de 2-4 líneas (formato 'A: ...' / 'B: ...') donde una línea use "
-    "el chunk. Respondé ÚNICAMENTE con JSON válido de la forma "
+    "el chunk. IMPORTANTE: el contenido de los 3 campos tiene que estar TOTALMENTE en "
+    "inglés — nada de español, ni traducciones, ni aclaraciones en español. Respondé "
+    "ÚNICAMENTE con JSON válido de la forma "
     '{"sentence": "...", "paragraph": "...", "conversation": "..."}, sin texto adicional.'
 )
 
@@ -34,4 +36,4 @@ async def get_chunk_examples(llm: LLMProvider, *, chunk: str, function: str) -> 
                 f"Falta '{key}' en los ejemplos generados para el chunk"
             )
 
-    return {key: examples[key] for key in REQUIRED_KEYS}
+    return {key: examples[key].replace("\\n", "\n") for key in REQUIRED_KEYS}

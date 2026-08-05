@@ -386,6 +386,22 @@ Suite completa: 135/135 (2 de integración deseleccionados).
 
 ---
 
+### Fase 9.5 — 4 ajustes de Fase 9.4 probando módulo 2 en vivo ✅
+
+El usuario probó los ejemplos del chunk "Be careful with that." y reportó 4 problemas, corregidos con TDD:
+
+1. **"Todo debe estar en inglés"** — el `SYSTEM_PROMPT` ya pedía inglés pero no prohibía explícitamente mezclar español. Reforzado: "el contenido de los 3 campos tiene que estar TOTALMENTE en inglés — nada de español". Test: `test_system_prompt_forbids_spanish`.
+2. **"En el ejemplo de conversación se ve el backslash-n literal"** — el LLM a veces devuelve el JSON con el backslash doblado (`\\n` en vez de `\n`), así que `json.loads` decodifica un backslash+n literal en vez de un salto de línea real. Arreglado con normalización defensiva en `get_chunk_examples()` (`.replace("\\n", "\n")`) + CSS `white-space: pre-line` en los elementos de párrafo/conversación (necesario de todos modos para que saltos de línea reales se vean, sea cual sea la causa). Test: `test_get_chunk_examples_normalizes_escaped_newlines`.
+3. **"Usemos íconos para oración simple, párrafo y conversación"** — reemplazados los labels en español por ✏️/📄/💬. Test: `test_index_html_chunk_examples_use_icons_not_spanish_labels`.
+4. **"El chunk debe aparecer siempre en negritas"** — interpretado como: siempre, incluyendo dentro de los 3 ejemplos generados, no solo en el display principal. `chunk-text` envuelto en `<strong>` (siempre es el chunk exacto). Para los ejemplos generados se agregó `boldChunkOccurrences(text, chunk)` en `app.js`: escapa HTML, busca el chunk (case-insensitive) dentro del texto y lo envuelve en `<strong>`, usando `.innerHTML` en vez de `.textContent` — con `escapeHtml()` aplicado antes para evitar XSS sobre contenido generado por el LLM.
+   - **Bug real encontrado verificando en vivo:** el LLM a veces sigue la oración después del chunk sin el punto final (ej. "Be careful with that **glass vase**...", no "Be careful with that.**glass vase**"), así que el match exacto (con el punto incluido) no encontraba nada en el párrafo. Arreglado ignorando puntuación final del chunk al buscar coincidencias (`chunk.trim().replace(/[.!?]+$/, "")`). Test: `test_app_js_bolding_ignores_trailing_punctuation`.
+
+**Verificado en vivo contra DeepSeek real:** las 3 categorías ahora resaltan el chunk correctamente, incluso cuando el LLM lo integra en una oración más larga sin el punto final.
+
+Suite completa: 141/141 (2 de integración deseleccionados).
+
+---
+
 ### Fase 10 — Cierre de v1
 
 - Checklist completo de `DEFINITION-OF-DONE.md` (global + por feature de esta iteración)
