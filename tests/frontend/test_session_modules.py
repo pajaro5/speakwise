@@ -195,6 +195,17 @@ def test_app_js_free_conversation_renders_chat_bubbles() -> None:
     assert '"tutor"' in handler
 
 
+def test_app_js_free_conversation_sends_week_words_and_stress_to_tutor() -> None:
+    """ITER-2: módulo 3 manda las palabras de la semana como target_words
+    a /api/transcribe, y reenvía stress_results al tutor para que pueda
+    mencionar errores de acento con calidez si tiene sentido."""
+    js = _read("app.js")
+    handler = js.split("async function handleFreeConversationRecording")[1]
+    handler = handler.split("if (\"serviceWorker\"")[0]
+    assert "todaysPlan.week_words" in handler
+    assert "stress_results: transcript.stress_results" in handler
+
+
 def test_app_js_pattern_recording_sends_target_words_and_reports_stress(
 ) -> None:
     """ITER-2: módulo 1 manda las palabras de la familia del patrón como
@@ -204,9 +215,19 @@ def test_app_js_pattern_recording_sends_target_words_and_reports_stress(
     handler = js.split("async function handlePatternRecording")[1]
     handler = handler.split("async function handleChunkRecording")[0]
     assert "todaysPlan.pattern_focus.family.map(stripMarkup)" in handler
-    assert "transcribeAudio(audioBlob, targetWords)" in handler
+    assert "transcribeAudio(audioBlob, targetWords, todaysPlan.pattern_focus.name)" in handler
     assert "stress_results: transcript.stress_results" in handler
     assert "results.filter" in handler
+
+
+def test_app_js_pattern_recording_sends_pattern_name_and_logs_phoneme_errors() -> None:
+    """ITER-2: además de target_words, módulo 1 manda pattern_name (para que
+    el backend agrupe pattern_errors) y loguea phoneme_errors reales."""
+    js = _read("app.js")
+    assert "formData.append(\"pattern_name\", patternName)" in js
+    handler = js.split("async function handlePatternRecording")[1]
+    handler = handler.split("async function handleChunkRecording")[0]
+    assert "phoneme_errors: transcript.phoneme_errors" in handler
 
 
 def test_app_js_pattern_recording_shows_what_it_heard_when_no_match() -> None:

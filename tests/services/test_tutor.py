@@ -78,3 +78,38 @@ async def test_tutor_system_prompt_includes_todays_word_forms(seeded_db_path: st
 
     first_word = plan["week_words"][0]["form"]
     assert first_word in llm.last_system_prompt
+
+
+@pytest.mark.asyncio
+async def test_tutor_system_prompt_mentions_stress_errors(seeded_db_path: str) -> None:
+    """ITER-2: integración de stress_results al tutor — si el alumno
+    acentuó mal una palabra en conversación libre, el tutor lo sabe y
+    puede mencionarlo con calidez, sin forzarlo cada turno."""
+    llm = _CapturingLLM()
+    with db_connection(seeded_db_path) as conn:
+        await get_tutor_reply(
+            conn, llm,
+            text="I like banana", history=[], session_id=None, topic="", wpm=0.0, fillers=0,
+            stress_results=[
+                {"word": "banana", "expected_syl": 1, "detected_syl": 0, "correct": False}
+            ],
+        )
+
+    assert "banana" in llm.last_system_prompt
+
+
+@pytest.mark.asyncio
+async def test_tutor_system_prompt_omits_stress_note_when_all_correct(
+    seeded_db_path: str,
+) -> None:
+    llm = _CapturingLLM()
+    with db_connection(seeded_db_path) as conn:
+        await get_tutor_reply(
+            conn, llm,
+            text="I like banana", history=[], session_id=None, topic="", wpm=0.0, fillers=0,
+            stress_results=[
+                {"word": "banana", "expected_syl": 1, "detected_syl": 1, "correct": True}
+            ],
+        )
+
+    assert "banana" not in llm.last_system_prompt

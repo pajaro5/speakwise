@@ -104,6 +104,9 @@ async def test_transcribe_and_analyze_computes_stress_results_when_target_words_
             {"word": "average", "expected_syl": 0, "detected_syl": 0, "correct": True}
         ],
     )
+    monkeypatch.setattr(
+        "backend.services.acoustic.analyze_phonemes", lambda waveform, sr, words, target_words: []
+    )
 
     result = await transcribe_and_analyze(
         b"fake-webm-audio", provider=provider, target_words=["average"]
@@ -112,6 +115,105 @@ async def test_transcribe_and_analyze_computes_stress_results_when_target_words_
     assert result.stress_results == [
         {"word": "average", "expected_syl": 0, "detected_syl": 0, "correct": True}
     ]
+
+
+@pytest.mark.asyncio
+async def test_transcribe_and_analyze_computes_phoneme_errors_when_target_words_given(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    raw_words = [{"w": "banana", "start": 0.0, "end": 1.0}]
+    fake_transcript = Transcript(text="banana", wpm=0.0, words=raw_words, fillers=0)
+    provider = _FakeSTTProvider(fake_transcript)
+
+    monkeypatch.setattr(
+        "backend.services.acoustic.load_waveform", lambda audio: ("FAKE_WAVE", 16000)
+    )
+    monkeypatch.setattr(
+        "backend.services.acoustic.analyze_stress", lambda waveform, sr, words, target_words: []
+    )
+    monkeypatch.setattr(
+        "backend.services.acoustic.analyze_phonemes",
+        lambda waveform, sr, words, target_words: [
+            {"word": "banana", "expected": "AE1", "produced": "b ə n a n a"}
+        ],
+    )
+
+    result = await transcribe_and_analyze(
+        b"fake-webm-audio", provider=provider, target_words=["banana"]
+    )
+
+    assert result.phoneme_errors == [
+        {"word": "banana", "expected": "AE1", "produced": "b ə n a n a"}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_transcribe_and_analyze_groups_errors_by_pattern_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """DoD de BACKLOG.md: "si produzco 3+ errores de -age/-idge, pattern_errors
+    lo reporta" — cuenta palabras únicas con error (stress o fonema), agrupadas
+    bajo el nombre del patrón que se está practicando."""
+    raw_words = [
+        {"w": "average", "start": 0.0, "end": 1.0},
+        {"w": "manage", "start": 1.0, "end": 2.0},
+    ]
+    fake_transcript = Transcript(text="average manage", wpm=0.0, words=raw_words, fillers=0)
+    provider = _FakeSTTProvider(fake_transcript)
+
+    monkeypatch.setattr(
+        "backend.services.acoustic.load_waveform", lambda audio: ("FAKE_WAVE", 16000)
+    )
+    monkeypatch.setattr(
+        "backend.services.acoustic.analyze_stress",
+        lambda waveform, sr, words, target_words: [
+            {"word": "average", "expected_syl": 0, "detected_syl": 1, "correct": False},
+            {"word": "manage", "expected_syl": 0, "detected_syl": 0, "correct": True},
+        ],
+    )
+    monkeypatch.setattr(
+        "backend.services.acoustic.analyze_phonemes",
+        lambda waveform, sr, words, target_words: [
+            {"word": "manage", "expected": "AE1", "produced": "m ɛ n ɪ dʒ"}
+        ],
+    )
+
+    result = await transcribe_and_analyze(
+        b"fake-webm-audio",
+        provider=provider,
+        target_words=["average", "manage"],
+        pattern_name="-age/-idge",
+    )
+
+    assert result.pattern_errors == {"-age/-idge": 2}
+
+
+@pytest.mark.asyncio
+async def test_transcribe_and_analyze_skips_pattern_errors_without_pattern_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    raw_words = [{"w": "average", "start": 0.0, "end": 1.0}]
+    fake_transcript = Transcript(text="average", wpm=0.0, words=raw_words, fillers=0)
+    provider = _FakeSTTProvider(fake_transcript)
+
+    monkeypatch.setattr(
+        "backend.services.acoustic.load_waveform", lambda audio: ("FAKE_WAVE", 16000)
+    )
+    monkeypatch.setattr(
+        "backend.services.acoustic.analyze_stress",
+        lambda waveform, sr, words, target_words: [
+            {"word": "average", "expected_syl": 0, "detected_syl": 1, "correct": False}
+        ],
+    )
+    monkeypatch.setattr(
+        "backend.services.acoustic.analyze_phonemes", lambda waveform, sr, words, target_words: []
+    )
+
+    result = await transcribe_and_analyze(
+        b"fake-webm-audio", provider=provider, target_words=["average"]
+    )
+
+    assert result.pattern_errors == {}
 
 
 @pytest.mark.asyncio

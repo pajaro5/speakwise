@@ -51,6 +51,35 @@ def test_log_pattern_practiced_updates_accuracy_from_stress_results(db_path: str
     assert row["accuracy"] == pytest.approx(0.5)
 
 
+def test_log_pattern_practiced_logs_phoneme_errors(db_path: str) -> None:
+    """ITER-2: los phoneme_errors (comparación fonémica real, wav2vec2) se
+    guardan en phoneme_log igual que los stress_results incorrectos."""
+    from backend.database import create_session
+
+    with db_connection(db_path) as conn:
+        conn.execute(
+            "INSERT INTO phonetic_patterns (id, name, priority) VALUES (1, '-age/-idge', 1)"
+        )
+        session_id = create_session(
+            conn, date="2026-08-05", topic="", transcript="", wpm=0.0, fillers=0, feedback="",
+        )
+        conn.commit()
+
+        log_pattern_practiced(
+            conn,
+            pattern_id=1,
+            session_id=session_id,
+            phoneme_errors=[{"word": "banana", "expected": "AE1", "produced": "b ə n a n a"}],
+        )
+
+        rows = conn.execute(
+            "SELECT * FROM phoneme_log WHERE session_id = ?", (session_id,)
+        ).fetchall()
+
+    assert len(rows) == 1
+    assert rows[0]["word"] == "banana"
+
+
 def test_log_chunk_used_marks_produced_when_chunk_in_transcript(db_path: str) -> None:
     from backend.database import create_session
 

@@ -1,7 +1,12 @@
 import re
 import sqlite3
 
-from backend.database import log_stress_results, mark_chunk_used, upsert_pattern_progress
+from backend.database import (
+    log_phoneme_errors,
+    log_stress_results,
+    mark_chunk_used,
+    upsert_pattern_progress,
+)
 from backend.services.exceptions import InvalidLogEventError
 
 
@@ -11,6 +16,7 @@ def log_pattern_practiced(
     pattern_id: int,
     session_id: int | None = None,
     stress_results: list[dict] | None = None,
+    phoneme_errors: list[dict] | None = None,
 ) -> None:
     if stress_results:
         correct = sum(1 for r in stress_results if r["correct"])
@@ -21,6 +27,9 @@ def log_pattern_practiced(
             log_stress_results(conn, session_id, stress_results)
     else:
         upsert_pattern_progress(conn, pattern_id=pattern_id)
+
+    if phoneme_errors and session_id is not None:
+        log_phoneme_errors(conn, session_id, phoneme_errors)
 
 
 def log_chunk_used(
@@ -47,12 +56,17 @@ def handle_log_event(
     chunk: str | None,
     transcript: str | None,
     stress_results: list[dict] | None = None,
+    phoneme_errors: list[dict] | None = None,
 ) -> dict:
     if event == "pattern_practiced":
         if pattern_id is None:
             raise InvalidLogEventError("pattern_id es requerido para event=pattern_practiced")
         log_pattern_practiced(
-            conn, pattern_id=pattern_id, session_id=session_id, stress_results=stress_results
+            conn,
+            pattern_id=pattern_id,
+            session_id=session_id,
+            stress_results=stress_results,
+            phoneme_errors=phoneme_errors,
         )
         return {"ok": True}
 

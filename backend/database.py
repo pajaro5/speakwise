@@ -251,3 +251,18 @@ def log_stress_results(
             ),
         )
     conn.commit()
+
+
+def log_phoneme_errors(
+    conn: sqlite3.Connection, session_id: int, phoneme_errors: list[dict]
+) -> None:
+    """A diferencia de log_stress_results, esto sí es una comparación
+    fonémica real (services/phoneme.py, wav2vec2) — phoneme_exp/phoneme_got
+    son fonemas de verdad, no una posición de sílaba."""
+    for e in phoneme_errors:
+        conn.execute(
+            "INSERT INTO phoneme_log (session_id, word, phoneme_exp, phoneme_got, correct) "
+            "VALUES (?, ?, ?, ?, 0)",
+            (session_id, e["word"], e["expected"], e["produced"]),
+        )
+    conn.commit()

@@ -95,16 +95,53 @@ El usuario probó módulo 1 diciendo texto sin relación con las palabras del pa
 
 Suite completa: 167/167 (2 de integración deseleccionados).
 
-## 7. Comandos de referencia
+## 8. Fase 6 — "cerrá bien ITER-2, terminemos todo al 100% correcto"
+
+El usuario pidió cerrar todo lo pendiente de ITER-2 que fuera técnicamente posible sin su voz real (dejando EVAL-01/EVAL-03 explícitamente para cuando él pueda probar).
+
+### 8.1 `phoneme_errors` — sí era viable ✅
+
+`DESIGN.md` original pedía un reconocedor de fonemas dedicado, descartado en la Fase 1 de este plan por asumir que sería tan pesado como Ollama 7B (rechazado en `planVersion1.md` Fase 3 — "mi PC no es suficiente"). **Se verificó en serio antes de descartarlo de nuevo:** `facebook/wav2vec2-lv-60-espeak-cv-ft` (315M parámetros, mismo orden de magnitud que lo que ya corre bien — faster-whisper, Kokoro) carga en ~56s (una vez, se cachea) y hace inferencia en ~0.5s por palabra sobre CPU. `torch`/`transformers` ya estaban instalados (dependencia de Kokoro). Viable de verdad, no una suposición.
+
+**`services/phoneme.py` (nuevo):**
+- `arpabet_to_ipa()`: mapeo ARPAbet → IPA, con caso especial para AH/ER (schwa átono vs. vocal plena acentuada — coincide con lo que el modelo real distingue).
+- `expected_focus_phoneme(word)`: fonema (ARPAbet, IPA) con acento primario según CMU dict — mismo scope acotado que el ejemplo de `DESIGN.md` (`{"word": "average", "expected": "AE1", "produced": "AH1"}`, un fonema focal, no la palabra entera).
+- `recognize_phonemes()`: reconoce los fonemas IPA realmente producidos en un tramo de audio — independiente del texto esperado, a diferencia de Whisper (que "autocorrige" a la palabra correcta).
+- `analyze_phonemes()`: compara, devuelve solo los errores (fonema esperado ausente de lo producido).
+
+Tests rápidos (lógica pura, sin cargar el modelo) + 1 test `@pytest.mark.integration` contra el modelo y audio TTS real (mismo patrón que Kokoro — excluido del run por defecto, no gasta tiempo/ancho de banda en cada corrida de CI).
+
+**Verificado en vivo contra el pipeline real completo:** `POST /api/transcribe` con audio TTS real de "banana" devolvió `phoneme_errors: [{"word": "banana", "expected": "AE1", "produced": "b ə n aː n"}]` — detectó que la vocal tónica esperada (æ) no apareció en lo producido (aː, una vocal cercana pero distinta). Confirmado también que el pipeline preserva UTF-8 correctamente de punta a punta vía navegador (un intento manual de probarlo con `curl` tipeando IPA directamente en la terminal de Windows corrompió los caracteres — eso era el shell, no la app; confirmado re-verificando vía Chrome).
+
+### 8.2 `pattern_errors` ✅
+
+`transcribe_and_analyze()` gana `pattern_name` opcional — si se pasa, agrupa las palabras únicas con error (stress o fonema) bajo ese nombre: `{"schwa": 1}`. Módulo 1 lo manda automáticamente (`todaysPlan.pattern_focus.name`). Verificado en vivo: `pattern_errors: {"schwa": 1}` en la misma respuesta que el `phoneme_errors` de arriba.
+
+### 8.3 `phoneme_log` ahora tiene datos fonémicos reales ✅
+
+`log_phoneme_errors()` (nuevo, `database.py`) guarda los `phoneme_errors` reales en `phoneme_log` — a diferencia de `log_stress_results()` (que solo tenía posiciones de sílaba como placeholder), esto es una comparación fonémica de verdad. Verificado contra la DB real vía el flujo del navegador: `phoneme_exp='AE1'`, `phoneme_got` con el carácter IPA correcto (U+0259, "ə") preservado.
+
+### 8.4 Integración con el tutor (módulo 3) ✅
+
+Último ítem pendiente de la lista original. `services/tutor.py`: `_build_system_prompt()`/`get_tutor_reply()` ganan `stress_results` opcional — si hay palabras con acento incorrecto, se agrega una nota al prompt pidiéndole al tutor que lo mencione "con calidez... sin forzarlo" (mismo tono que ya se usa para `chunk_today`/`week_words`). `POST /api/tutor` gana `stress_results` en el request. Frontend: módulo 3 manda las palabras de la semana (`todaysPlan.week_words`) como `target_words` a `/api/transcribe`, y reenvía el `stress_results` resultante a `/api/tutor`.
+
+**Verificado en vivo contra DeepSeek real:** con `stress_results` marcando "banana" con acento incorrecto, en una conversación donde tenía sentido preguntarlo, el tutor respondió con una corrección específica y útil: *"You say it like this: buh-NA-nuh. The stress is on the second syllable: NA..."* — no lo menciona cada turno (es una nota "si tiene sentido", no una corrección forzada), que es el comportamiento diseñado.
+
+Suite completa: 187/187 (3 de integración deseleccionados — Kokoro, DeepSeek, y ahora el reconocedor de fonemas).
+
+### 8.5 Lo único que sigue pendiente: EVAL-01 y EVAL-03
+
+No se pueden cerrar sin la voz real del usuario — todo lo demás de la lista original de ITER-2 está construido y verificado contra servicios reales (no solo mocks). Ver `BACKLOG.md` para el detalle actualizado.
+
+## 9. Comandos de referencia
 
 ```powershell
-# Verificar stress detection contra audio real (sin usar el micrófono):
-# 1. Generar audio real con el TTS:
-curl -s -X POST http://localhost:8000/api/speak -H "Content-Type: application/json" -d '{"text": "average"}' -o word.mp3
-# 2. Mandarlo como si fuera la grabación del alumno:
-curl -s -X POST http://localhost:8000/api/transcribe -F "audio=@word.mp3" -F "target_words=average"
+# Verificar el pipeline completo (stress + phoneme + pattern) contra audio real:
+curl -s -X POST http://localhost:8000/api/speak -H "Content-Type: application/json" -d '{"text": "banana"}' -o word.mp3
+curl -s -X POST http://localhost:8000/api/transcribe -F "audio=@word.mp3" -F "target_words=banana" -F "pattern_name=schwa"
 
-docker compose exec speakwise python -m pytest tests/services/test_stress.py -v
+docker compose exec speakwise python -m pytest tests/services/test_stress.py tests/services/test_phoneme.py -v
+docker compose exec speakwise python -m pytest -m integration -v   # incluye el modelo de fonemas real (~1.2GB, primera vez)
 ```
 
 ---

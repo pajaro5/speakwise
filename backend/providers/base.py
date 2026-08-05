@@ -10,6 +10,8 @@ class Transcript:
     phonemes: list[dict] = field(default_factory=list)
     fillers: int = 0
     stress_results: list[dict] = field(default_factory=list)
+    phoneme_errors: list[dict] = field(default_factory=list)
+    pattern_errors: dict[str, int] = field(default_factory=dict)
 
 
 class STTProvider(ABC):

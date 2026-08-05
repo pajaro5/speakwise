@@ -184,6 +184,34 @@ def test_log_stress_results_records_only_errors(temp_db_path: str) -> None:
     assert rows[0]["correct"] == 0
 
 
+def test_log_phoneme_errors_records_real_phoneme_mismatch(temp_db_path: str) -> None:
+    """ITER-2: a diferencia de log_stress_results (que solo compara posición
+    de sílaba), esto guarda una comparación fonémica real (services/phoneme.py,
+    wav2vec2) — phoneme_exp/phoneme_got son fonemas ARPAbet/IPA de verdad."""
+    from backend.database import create_session, log_phoneme_errors
+
+    with db_connection(temp_db_path) as conn:
+        session_id = create_session(
+            conn, date="2026-08-05", topic="", transcript="", wpm=0.0, fillers=0, feedback="",
+        )
+
+        log_phoneme_errors(
+            conn,
+            session_id,
+            [{"word": "banana", "expected": "AE1", "produced": "b ə n a n a"}],
+        )
+
+        rows = conn.execute(
+            "SELECT * FROM phoneme_log WHERE session_id = ?", (session_id,)
+        ).fetchall()
+
+    assert len(rows) == 1
+    assert rows[0]["word"] == "banana"
+    assert rows[0]["phoneme_exp"] == "AE1"
+    assert rows[0]["phoneme_got"] == "b ə n a n a"
+    assert rows[0]["correct"] == 0
+
+
 def test_mark_chunk_used_updates_session_row(temp_db_path: str) -> None:
     from backend.database import create_session, mark_chunk_used
 

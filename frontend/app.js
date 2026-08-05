@@ -90,11 +90,14 @@ async function playTextWithButton(text, btn) {
   }
 }
 
-async function transcribeAudio(audioBlob, targetWords) {
+async function transcribeAudio(audioBlob, targetWords, patternName) {
   const formData = new FormData();
   formData.append("audio", audioBlob, "audio.webm");
   if (targetWords && targetWords.length) {
     formData.append("target_words", targetWords.join(","));
+  }
+  if (patternName) {
+    formData.append("pattern_name", patternName);
   }
   const response = await fetch("/api/transcribe", { method: "POST", body: formData });
   return parseJsonOrThrow(response);
@@ -263,12 +266,13 @@ async function loadChunkExamples() {
 async function handlePatternRecording(audioBlob) {
   statusEl.textContent = "Transcribing...";
   const targetWords = todaysPlan.pattern_focus.family.map(stripMarkup);
-  const transcript = await transcribeAudio(audioBlob, targetWords);
+  const transcript = await transcribeAudio(audioBlob, targetWords, todaysPlan.pattern_focus.name);
   await postJson("/api/log", {
     session_id: sessionId,
     event: "pattern_practiced",
     pattern_id: todaysPlan.pattern_focus.id,
     stress_results: transcript.stress_results,
+    phoneme_errors: transcript.phoneme_errors,
   });
   const results = transcript.stress_results || [];
   if (results.length) {
@@ -317,13 +321,15 @@ function appendChatMessage(text, sender, audioUrl) {
 
 async function handleFreeConversationRecording(audioBlob) {
   statusEl.textContent = "Transcribing...";
-  const transcript = await transcribeAudio(audioBlob);
+  const targetWords = (todaysPlan.week_words || []).map((w) => w.form);
+  const transcript = await transcribeAudio(audioBlob, targetWords);
   appendChatMessage(transcript.text, "user");
 
   statusEl.textContent = "Thinking...";
   const tutor = await postJson("/api/tutor", {
     text: transcript.text, history, session_id: sessionId,
     wpm: transcript.wpm, fillers: transcript.fillers,
+    stress_results: transcript.stress_results,
   });
   sessionId = tutor.session_id;
   const cleanReply = stripMarkdown(tutor.reply);

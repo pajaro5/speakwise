@@ -55,9 +55,14 @@ def test_transcribe_returns_200_with_contract_shape(client) -> None:
 
     assert response.status_code == 200
     body = response.json()
-    assert set(body.keys()) == {"text", "wpm", "fillers", "words", "stress_results"}
+    assert set(body.keys()) == {
+        "text", "wpm", "fillers", "words", "stress_results", "phoneme_errors",
+        "pattern_errors",
+    }
     assert body["text"] == "I go"
     assert body["stress_results"] == []
+    assert body["phoneme_errors"] == []
+    assert body["pattern_errors"] == {}
 
 
 def test_transcribe_without_audio_returns_422(client) -> None:

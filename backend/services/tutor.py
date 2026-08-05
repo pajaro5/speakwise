@@ -19,7 +19,9 @@ BASE_SYSTEM_PROMPT = (
 )
 
 
-def _build_system_prompt(conn: sqlite3.Connection) -> str:
+def _build_system_prompt(
+    conn: sqlite3.Connection, stress_results: list[dict] | None = None
+) -> str:
     plan = build_todays_plan(conn)
     parts = [BASE_SYSTEM_PROMPT]
 
@@ -38,6 +40,16 @@ def _build_system_prompt(conn: sqlite3.Connection) -> str:
             "que aparezcan de forma natural."
         )
 
+    incorrect = [r["word"] for r in (stress_results or []) if not r["correct"]]
+    if incorrect:
+        mispronounced = ", ".join(incorrect)
+        parts.append(
+            f"Justo ahora el alumno acentuó mal la sílaba tónica en: {mispronounced}. "
+            "Si tiene sentido en el flujo de la charla, mencionalo con calidez y "
+            "mostrale brevemente cómo suena bien — sin interrumpir la conversación "
+            "ni retar por eso cada turno."
+        )
+
     return " ".join(parts)
 
 
@@ -51,9 +63,10 @@ async def get_tutor_reply(
     topic: str,
     wpm: float,
     fillers: int,
+    stress_results: list[dict] | None = None,
 ) -> tuple[str, int]:
     messages = [*history, {"role": "user", "content": text}]
-    system_prompt = _build_system_prompt(conn)
+    system_prompt = _build_system_prompt(conn, stress_results)
     reply = await llm.complete(messages=messages, system=system_prompt)
 
     if session_id is None:
