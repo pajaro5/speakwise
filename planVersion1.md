@@ -464,6 +464,20 @@ Suite completa: 147/147 (2 de integración deseleccionados).
 
 ---
 
+### Fase 9.10 — Markdown literal en el chat y leído en voz alta por el TTS ✅
+
+El usuario reportó que módulo 3 mostraba texto tipo `**"phoneme"**` sin renderizar (asteriscos literales en la burbuja del chat), y que el TTS después leía "asterisk, asterisk phoneme" en voz alta — el LLM (DeepSeek) a veces devuelve markdown, pero la app trata la respuesta como texto plano en ambos lugares.
+
+**Fix de raíz (backend):** `BASE_SYSTEM_PROMPT` en `services/tutor.py` ahora prohíbe explícitamente markdown, explicando el motivo (se muestra como texto plano y se lee con TTS). Test: `test_tutor_system_prompt_forbids_markdown`.
+
+**Defensa extra (frontend):** `stripMarkdown()` (nuevo, `app.js`) saca `**negrita**`, `*cursiva*`, `` `código` `` y `__negrita__` con regex simple, aplicado a la respuesta del tutor antes de guardarla en `history`, mostrarla en el chat, y mandarla a `/api/speak` — una sola limpieza, no en cada lugar por separado. Test: `test_app_js_strips_markdown_from_tutor_reply`.
+
+**Verificado en vivo contra DeepSeek real:** le pedí explícitamente que use negrita para forzar el caso — el modelo directamente se negó a usar markdown ("I will not use any markdown formatting..."), confirmando que el prompt reforzado funciona. `stripMarkdown()` verificado por separado con texto sintético con los 4 tipos de markdown mezclados.
+
+Suite completa: 169/169 (2 de integración deseleccionados).
+
+---
+
 ### Fase 10 — Cierre de v1
 
 - Checklist completo de `DEFINITION-OF-DONE.md` (global + por feature de esta iteración)

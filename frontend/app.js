@@ -225,6 +225,16 @@ function renderPatternFamily(family) {
   return family.map(renderMarkedWord).join(", ");
 }
 
+function stripMarkdown(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/__(.*?)__/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/_(.*?)_/g, "$1")
+    .replace(/`(.*?)`/g, "$1")
+    .trim();
+}
+
 function boldChunkOccurrences(text, chunk) {
   const escapedText = escapeHtml(text);
   const chunkCore = chunk.trim().replace(/[.!?]+$/, "");
@@ -316,12 +326,13 @@ async function handleFreeConversationRecording(audioBlob) {
     wpm: transcript.wpm, fillers: transcript.fillers,
   });
   sessionId = tutor.session_id;
+  const cleanReply = stripMarkdown(tutor.reply);
   history.push({ role: "user", content: transcript.text });
-  history.push({ role: "assistant", content: tutor.reply });
+  history.push({ role: "assistant", content: cleanReply });
 
   statusEl.textContent = "Generating audio...";
-  const audioUrl = await speak(tutor.reply);
-  const tutorBubble = appendChatMessage(tutor.reply, "tutor", audioUrl);
+  const audioUrl = await speak(cleanReply);
+  const tutorBubble = appendChatMessage(cleanReply, "tutor", audioUrl);
   tutorBubble.querySelector("audio").play();
   statusEl.textContent = "Done.";
 }

@@ -218,4 +218,18 @@ def test_app_js_pattern_recording_shows_what_it_heard_when_no_match() -> None:
     handler = js.split("async function handlePatternRecording")[1]
     handler = handler.split("async function handleChunkRecording")[0]
     assert "transcript.text" in handler
+
+
+def test_app_js_strips_markdown_from_tutor_reply() -> None:
+    """El usuario reportó que el tutor a veces devuelve **negrita** con
+    asteriscos: se ve mal en el chat y el TTS lee "asterisk" en voz alta.
+    stripMarkdown() se aplica a la respuesta antes de mostrarla y antes de
+    mandarla a /api/speak."""
+    js = _read("app.js")
+    assert "function stripMarkdown" in js
+    handler = js.split("async function handleFreeConversationRecording")[1]
+    handler = handler.split("if (\"serviceWorker\"")[0]
+    assert "stripMarkdown(tutor.reply)" in handler
+    assert "speak(cleanReply)" in handler
+    assert "appendChatMessage(cleanReply" in handler
     assert '"Practiced!"' not in handler

@@ -52,6 +52,21 @@ async def test_tutor_system_prompt_requires_english_only_replies(seeded_db_path:
 
 
 @pytest.mark.asyncio
+async def test_tutor_system_prompt_forbids_markdown(seeded_db_path: str) -> None:
+    """Reportado por el usuario: el tutor a veces devuelve **negrita** con
+    asteriscos — se ve mal en el chat Y el TTS lee "asterisk" en voz alta.
+    Es una conversación hablada, no texto con formato."""
+    llm = _CapturingLLM()
+    with db_connection(seeded_db_path) as conn:
+        await get_tutor_reply(
+            conn, llm,
+            text="hello", history=[], session_id=None, topic="", wpm=0.0, fillers=0,
+        )
+
+    assert "markdown" in llm.last_system_prompt.lower()
+
+
+@pytest.mark.asyncio
 async def test_tutor_system_prompt_includes_todays_word_forms(seeded_db_path: str) -> None:
     llm = _CapturingLLM()
     with db_connection(seeded_db_path) as conn:
