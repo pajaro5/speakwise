@@ -114,3 +114,49 @@ def test_reseeding_an_already_seeded_db_does_not_duplicate_overridden_chunks(tmp
         ).fetchall()
     assert len(rows) == 1, [r["chunk"] for r in rows]
     assert rows[0]["chunk"] == "Be careful with that."
+
+
+def test_pattern_family_words_have_marked_syllables(seeded_db_path: str) -> None:
+    """Reportado por el usuario: en "sílabas elididas" no queda claro cuál
+    sílaba no se pronuncia. Se agrega markup a las palabras de ejemplo:
+    ~x~ = letra/sílaba silenciosa, *x* = parte resaltada (pronunciación
+    distinta a la escrita, pero no muda)."""
+    import json
+
+    with db_connection(seeded_db_path) as conn:
+        rows = conn.execute("SELECT name, family FROM phonetic_patterns").fetchall()
+
+    by_name = {r["name"]: json.loads(r["family"]) for r in rows}
+
+    for word in by_name["sílabas elididas"]:
+        assert "~" in word, f"falta marcar la sílaba muda en {word!r}"
+    for word in by_name["letras mudas kn-/wr-"]:
+        assert "~" in word, f"falta marcar la letra muda en {word!r}"
+    for word in by_name["-age/-idge"]:
+        assert "*" in word, f"falta resaltar el sufijo en {word!r}"
+    for word in by_name["-tion/-sion"]:
+        assert "*" in word, f"falta resaltar el sufijo en {word!r}"
+    for word in by_name["schwa"]:
+        assert "*" in word, f"falta resaltar la vocal átona en {word!r}"
+
+
+def test_reseeding_updates_pattern_family_markup(tmp_path) -> None:
+    """Re-seedear una DB que ya tiene los patterns con el family viejo (sin
+    markup) debe actualizarlo, no dejarlo como estaba — mismo problema que
+    tuvieron los chunks de "be"."""
+    db_path = str(tmp_path / "seed_test.db")
+    seed.run(db_path)
+    with db_connection(db_path) as conn:
+        conn.execute(
+            "UPDATE phonetic_patterns SET family = '[\"different\", \"chocolate\"]' "
+            "WHERE name = 'sílabas elididas'"
+        )
+        conn.commit()
+
+    seed.run(db_path)
+
+    with db_connection(db_path) as conn:
+        row = conn.execute(
+            "SELECT family FROM phonetic_patterns WHERE name = 'sílabas elididas'"
+        ).fetchone()
+    assert "~" in row["family"]

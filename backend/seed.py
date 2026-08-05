@@ -102,6 +102,17 @@ def seed_patterns(conn: sqlite3.Connection, rows: list[dict]) -> None:
             "SELECT id FROM phonetic_patterns WHERE name = ?", (row["name"],)
         ).fetchone()
         if existing:
+            conn.execute(
+                "UPDATE phonetic_patterns SET rule_es = ?, rule_ipa = ?, family = ?, "
+                "priority = ? WHERE id = ?",
+                (
+                    row["rule_es"],
+                    row["rule_ipa"],
+                    row["family"],
+                    int(row["priority"]),
+                    existing["id"],
+                ),
+            )
             continue
         conn.execute(
             "INSERT INTO phonetic_patterns (name, rule_es, rule_ipa, family, priority) "

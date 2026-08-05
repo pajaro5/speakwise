@@ -416,6 +416,28 @@ Suite completa: 142/142 (2 de integración deseleccionados).
 
 ---
 
+### Fase 9.7 — Resaltar sílabas/letras en las palabras de ejemplo de módulo 1 ✅
+
+El usuario notó que en "sílabas elididas" las palabras de ejemplo no dejaban claro cuál sílaba no se pronuncia. Pregunta exploratoria respondida primero con una recomendación (curar a mano qué parte resaltar por palabra, ya que derivarlo del CMU dict es un problema real de alineación grafema-fonema) — el usuario la aprobó y se generalizó a los 5 patrones, no solo el de sílabas elididas.
+
+**Diseño:** markup inline en el campo `family` de `patterns.csv` — `~x~` para letra/sílaba muda (tachado), `*x*` para parte resaltada/pronunciada distinto a como se escribe pero no muda (highlight). Sin cambio de schema: `family` ya se guardaba como JSON de texto libre.
+
+- `-age/-idge`: resalta el sufijo (`aver*age*`)
+- `-tion/-sion`: resalta el sufijo (`na*tion*`)
+- `sílabas elididas`: tacha la vocal muda (`diff~e~rent`)
+- `letras mudas kn-/wr-`: tacha la consonante muda (`~k~now`)
+- `schwa`: resalta la vocal átona reducida (`*a*bout`, `b*a*nan*a*`)
+
+**Backend (TDD):** `corpus/patterns.csv` actualizado con el markup. `seed_patterns()` tenía el mismo bug que tuvieron los chunks de "be" (Fase 9.1): si el pattern ya existía, no actualizaba `family`/`rule_es`/`rule_ipa` — cambiado a `UPDATE` para que un re-seed corrija DBs ya pobladas. Tests: `test_pattern_family_words_have_marked_syllables`, `test_reseeding_updates_pattern_family_markup`.
+
+**Frontend (TDD estructural):** `app.js` — `renderMarkedWord()`/`renderPatternFamily()` parsean el markup a `<s>`/`<mark>`; `stripMarkup()` saca los símbolos antes de mandar el texto al TTS (si no, Kokoro leería los `~`/`*` literales). CSS: `<mark>` amarillo, `<s>` gris con tachado rojo. Test: `test_app_js_renders_pattern_family_markup`.
+
+**Verificado en vivo (Chrome):** tachado visible en "different, chocolate, vegetable, camera, family" (letra muda en rojo), resaltado amarillo en "average, manage, village, damage, package" (sufijo), y confirmado que el botón "Listen to examples" le manda al TTS el texto limpio sin símbolos.
+
+Suite completa: 145/145 (2 de integración deseleccionados).
+
+---
+
 ### Fase 10 — Cierre de v1
 
 - Checklist completo de `DEFINITION-OF-DONE.md` (global + por feature de esta iteración)

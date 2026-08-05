@@ -70,7 +70,7 @@ def test_app_js_disables_listen_buttons_while_playing_audio() -> None:
     feedback de que ya está cargando."""
     js = _read("app.js")
     assert "btn.disabled = true" in js
-    assert "playTextWithButton(todaysPlan.pattern_focus.family.join(\". \"), listenPatternBtn)" in js
+    assert "playTextWithButton(cleanWords.join(\". \"), listenPatternBtn)" in js
     assert "playTextWithButton(todaysPlan.chunk_today.chunk, listenChunkBtn)" in js
 
 
@@ -152,3 +152,16 @@ def test_ui_text_is_in_english_not_spanish() -> None:
     for marker in spanish_markers:
         assert marker not in html, f"queda texto en español en index.html: {marker!r}"
         assert marker not in js, f"queda texto en español en app.js: {marker!r}"
+
+
+def test_app_js_renders_pattern_family_markup() -> None:
+    """El usuario reportó que en "sílabas elididas" no queda claro cuál
+    sílaba no se pronuncia. seed.py ahora marca las palabras con ~x~
+    (silenciosa) y *x* (resaltada) — app.js tiene que parsear eso y
+    convertirlo en <s>/<mark>, y sacarlo antes de mandar el texto al TTS."""
+    js = _read("app.js")
+    assert "renderPatternFamily" in js
+    assert "patternFamilyEl.innerHTML" in js
+    assert "<s>" in js
+    assert "<mark>" in js
+    assert "stripMarkup" in js

@@ -110,7 +110,7 @@ async function startSession() {
     patternNameEl.textContent = pattern.name;
     patternRuleEl.textContent = pattern.rule_es;
     patternIpaEl.textContent = pattern.rule_ipa;
-    patternFamilyEl.textContent = pattern.family.join(", ");
+    patternFamilyEl.innerHTML = renderPatternFamily(pattern.family);
   }
   const chunk = todaysPlan.chunk_today;
   if (chunk) {
@@ -196,6 +196,32 @@ function escapeHtml(text) {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
+}
+
+// ~x~ = silent letter/syllable, *x* = highlighted (pronounced differently
+// than written, but not silent) -- markup added by seed.py for pattern
+// example words.
+function stripMarkup(word) {
+  return word.replace(/[~*]/g, "");
+}
+
+function renderMarkedWord(word) {
+  return word
+    .split(/(~[^~]+~|\*[^*]+\*)/g)
+    .map((part) => {
+      if (part.startsWith("~") && part.endsWith("~")) {
+        return `<s>${escapeHtml(part.slice(1, -1))}</s>`;
+      }
+      if (part.startsWith("*") && part.endsWith("*")) {
+        return `<mark>${escapeHtml(part.slice(1, -1))}</mark>`;
+      }
+      return escapeHtml(part);
+    })
+    .join("");
+}
+
+function renderPatternFamily(family) {
+  return family.map(renderMarkedWord).join(", ");
 }
 
 function boldChunkOccurrences(text, chunk) {
@@ -286,7 +312,8 @@ startSessionBtn.addEventListener("click", () => {
 });
 
 listenPatternBtn.addEventListener("click", () => {
-  playTextWithButton(todaysPlan.pattern_focus.family.join(". "), listenPatternBtn).catch((error) => {
+  const cleanWords = todaysPlan.pattern_focus.family.map(stripMarkup);
+  playTextWithButton(cleanWords.join(". "), listenPatternBtn).catch((error) => {
     statusEl.textContent = `Error: ${error.message}`;
   });
 });
