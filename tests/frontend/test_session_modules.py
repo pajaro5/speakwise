@@ -207,3 +207,15 @@ def test_app_js_pattern_recording_sends_target_words_and_reports_stress(
     assert "transcribeAudio(audioBlob, targetWords)" in handler
     assert "stress_results: transcript.stress_results" in handler
     assert "results.filter" in handler
+
+
+def test_app_js_pattern_recording_shows_what_it_heard_when_no_match() -> None:
+    """El usuario preguntó "¿el sistema reconoce lo que digo de verdad?" —
+    al decir algo sin relación con las palabras del patrón, la app mostraba
+    el mismo "Practiced!" genérico de siempre, sin importar qué se dijo.
+    Tiene que mostrar la transcripción real para probar que sí escuchó."""
+    js = _read("app.js")
+    handler = js.split("async function handlePatternRecording")[1]
+    handler = handler.split("async function handleChunkRecording")[0]
+    assert "transcript.text" in handler
+    assert '"Practiced!"' not in handler

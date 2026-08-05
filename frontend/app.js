@@ -265,7 +265,7 @@ async function handlePatternRecording(audioBlob) {
     const correct = results.filter((r) => r.correct).length;
     statusEl.textContent = `Stress correct on ${correct}/${results.length} word(s) — keep practicing!`;
   } else {
-    statusEl.textContent = "Practiced!";
+    statusEl.textContent = `I heard: "${transcript.text}" — try saying one of the words above so I can check your stress.`;
   }
   nextToModule2Btn.classList.remove("hidden");
 }

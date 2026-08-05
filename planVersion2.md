@@ -85,6 +85,16 @@ Suite completa: 166/166 (2 de integración deseleccionados).
 - **Integración con el tutor** (system prompt de `services/tutor.py` usando `stress_results`) — `stress_results` hoy solo se usa en el feedback de UI de módulo 1, no en la conversación con el LLM. Módulo 3 (conversación libre) no manda `target_words` a `/api/transcribe` — habría que decidir qué palabras chequear ahí.
 - **EVAL-01** (20 grabaciones reales) y **EVAL-03** (10 transcripciones) — pendientes de la voz real del usuario, mismo patrón que EVAL-06 en ITER-1. EVAL-01 en particular es la validación real de si el proxy de pico-de-intensidad sirve en la práctica o necesita más ajuste.
 
+## 6.1 Fase 5 — "¿el sistema reconoce lo que digo de verdad?" ✅
+
+El usuario probó módulo 1 diciendo texto sin relación con las palabras del patrón y vio el mismo "Practiced!" genérico de siempre — preguntó si el reconocimiento de voz era real. Sí lo es (Whisper transcribe correctamente), pero el mensaje no lo probaba: cuando `stress_results` viene vacío (ninguna target word detectada en lo que dijo), el código caía al fallback genérico sin importar qué se dijo.
+
+**Fix:** `handlePatternRecording()` ahora muestra la transcripción real cuando no encuentra ninguna palabra objetivo — `I heard: "..." — try saying one of the words above`. Test: `test_app_js_pattern_recording_shows_what_it_heard_when_no_match`.
+
+**Verificado en vivo:** generé audio real con el TTS diciendo "I like pizza on Fridays" (sin relación al patrón del día) y se lo mandé a `handlePatternRecording` como si fuera la grabación del alumno — la app mostró correctamente `I heard: "I like pizza on Fridays." — try saying one of the words above...`, confirmando que la transcripción real llega hasta la UI.
+
+Suite completa: 167/167 (2 de integración deseleccionados).
+
 ## 7. Comandos de referencia
 
 ```powershell
