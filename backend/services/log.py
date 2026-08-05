@@ -1,3 +1,4 @@
+import re
 import sqlite3
 
 from backend.database import mark_chunk_used, upsert_pattern_progress
@@ -17,7 +18,8 @@ def log_chunk_used(
     detectar si el alumno repitió el chunk casi textual cuando se lo pide
     el módulo de práctica forzada.
     """
-    produced = chunk.strip().lower() in transcript.strip().lower()
+    chunk_core = re.sub(r"[.!?]+$", "", chunk.strip()).lower()
+    produced = chunk_core in transcript.strip().lower()
     mark_chunk_used(conn, session_id, chunk=chunk, produced=produced)
     return produced
 

@@ -270,11 +270,13 @@ async function handleChunkRecording(audioBlob) {
     chunk: todaysPlan.chunk_today.chunk,
     transcript: transcript.text,
   });
-  chunkFeedbackEl.textContent = result.produced
-    ? "Nice! You used the chunk."
-    : `You said: "${transcript.text}" — I didn't detect the exact chunk, but let's keep going.`;
+  if (result.produced) {
+    chunkFeedbackEl.textContent = "Nice! You used the chunk.";
+    nextToModule3Btn.classList.remove("hidden");
+  } else {
+    chunkFeedbackEl.textContent = `You said: "${transcript.text}" — I didn't catch the exact chunk. Try recording it again.`;
+  }
   statusEl.textContent = "";
-  nextToModule3Btn.classList.remove("hidden");
 }
 
 async function handleFreeConversationRecording(audioBlob) {

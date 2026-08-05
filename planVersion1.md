@@ -438,6 +438,20 @@ Suite completa: 145/145 (2 de integración deseleccionados).
 
 ---
 
+### Fase 9.8 — Detección de chunk fallaba por puntuación + pedir repetir si no se detecta ✅
+
+El usuario grabó "Be careful with that" correctamente pero la app dijo "I didn't detect the exact chunk, but let's keep going" y lo dejó avanzar igual.
+
+**Bug real (backend):** `log_chunk_used()` comparaba el chunk completo (`"Be careful with that."`, con punto final, tal como está en la DB) contra el transcript de Whisper (que normalmente no incluye el punto) con substring exacto — mismo problema que ya se había corregido en el resaltado del frontend (Fase 9.5), esta vez en la lógica de detección real que determina el feedback. Arreglado ignorando puntuación final del chunk antes de comparar (`re.sub(r"[.!?]+$", "", chunk)`). Test: `test_log_chunk_used_ignores_trailing_punctuation_mismatch`, reproduce el caso exacto reportado.
+
+**Cambio de UX (frontend):** cuando no se detecta el chunk, la app ya no dejaba avanzar con un mensaje genérico — ahora pide repetir la grabación y no muestra el botón "Next" hasta que se detecte. El botón de grabar ya queda disponible de nuevo (mismo estado que después de cualquier grabación), así que repetir es solo volver a tocarlo. Test: `test_app_js_chunk_recording_requires_retry_when_not_detected`.
+
+**Verificado en vivo contra la API real:** el caso exacto reportado ("Be careful with that." vs. transcript "Be careful with that") ahora devuelve `produced: true`; simulado el caso de no-detección, el botón "Next" queda oculto y aparece el mensaje de repetir.
+
+Suite completa: 147/147 (2 de integración deseleccionados).
+
+---
+
 ### Fase 10 — Cierre de v1
 
 - Checklist completo de `DEFINITION-OF-DONE.md` (global + por feature de esta iteración)

@@ -45,6 +45,29 @@ def test_log_chunk_used_marks_produced_when_chunk_in_transcript(db_path: str) ->
     assert row["chunk_produced"] == 1
 
 
+def test_log_chunk_used_ignores_trailing_punctuation_mismatch(db_path: str) -> None:
+    """Reportado por el usuario: dijo "Be careful with that" correctamente
+    pero no lo detectó — el chunk en la DB tiene punto final ("Be careful
+    with that.") y el transcript de Whisper no, así que el match exacto
+    por substring fallaba. Mismo bug que ya se corrigió en el resaltado
+    del frontend (Fase 9.5), ahora en la detección real."""
+    from backend.database import create_session
+
+    with db_connection(db_path) as conn:
+        session_id = create_session(
+            conn, date="2026-08-05", topic="", transcript="", wpm=0.0, fillers=0, feedback="",
+        )
+
+        produced = log_chunk_used(
+            conn,
+            session_id=session_id,
+            chunk="Be careful with that.",
+            transcript="Be careful with that",
+        )
+
+    assert produced is True
+
+
 def test_log_chunk_used_marks_not_produced_when_chunk_absent(db_path: str) -> None:
     from backend.database import create_session
 

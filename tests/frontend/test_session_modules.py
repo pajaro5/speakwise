@@ -165,3 +165,18 @@ def test_app_js_renders_pattern_family_markup() -> None:
     assert "<s>" in js
     assert "<mark>" in js
     assert "stripMarkup" in js
+
+
+def test_app_js_chunk_recording_requires_retry_when_not_detected() -> None:
+    """Reportado por el usuario: dijo el chunk correctamente pero no lo
+    detectó, y la app lo dejaba seguir igual ("but let's keep going"). Si
+    no se detecta, tiene que pedir repetir la grabación, no avanzar."""
+    js = _read("app.js")
+    handler = js.split("async function handleChunkRecording")[1]
+    handler = handler.split("async function handleFreeConversationRecording")[0]
+    assert "if (result.produced)" in handler
+    assert "nextToModule3Btn.classList.remove" in handler
+    assert handler.index("if (result.produced)") < handler.index(
+        "nextToModule3Btn.classList.remove"
+    )
+    assert "again" in handler.lower()
