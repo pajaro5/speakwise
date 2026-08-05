@@ -19,7 +19,11 @@ class _FakeSegment:
 
 
 class _FakeModel:
-    def transcribe(self, audio_path: str, word_timestamps: bool = True):
+    def __init__(self) -> None:
+        self.last_kwargs: dict = {}
+
+    def transcribe(self, audio_path: str, **kwargs):
+        self.last_kwargs = kwargs
         segments = [
             _FakeSegment(
                 " hello world",
@@ -47,6 +51,21 @@ async def test_transcribe_returns_text_and_words(monkeypatch: pytest.MonkeyPatch
         {"w": "world", "start": 0.5, "end": 0.9},
     ]
     assert result.wpm == 0.0
+
+
+@pytest.mark.asyncio
+async def test_transcribe_pins_language_to_english(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Reportado por el usuario: sin fijar el idioma, Whisper adivina el
+    idioma hablado a partir del audio — en grabaciones cortas (4s, módulo 1)
+    a veces le erra feo y devuelve texto en otro alfabeto (ej. griego). Esta
+    app es exclusivamente de inglés, no hay nada que adivinar."""
+    fake_model = _FakeModel()
+    monkeypatch.setattr(stt_whisperx, "_get_model", lambda size: fake_model)
+    provider = WhisperXLocalProvider(model_size="base")
+
+    await provider.transcribe(b"fake-webm-bytes")
+
+    assert fake_model.last_kwargs.get("language") == "en"
 
 
 @pytest.mark.asyncio

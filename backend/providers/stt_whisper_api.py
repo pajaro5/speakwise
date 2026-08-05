@@ -17,6 +17,7 @@ class WhisperAPIProvider(STTProvider):
                 file=("audio.webm", audio),
                 response_format="verbose_json",
                 timestamp_granularities=["word"],
+                language="en",
             )
         except Exception as exc:
             raise ProviderUnavailableError(f"Whisper API no disponible: {exc}") from exc

@@ -39,6 +39,30 @@ async def test_transcribe_returns_text_and_word_timestamps() -> None:
 
 @pytest.mark.asyncio
 @respx.mock
+async def test_transcribe_pins_language_to_english() -> None:
+    """Mismo bug que whisperx local: sin fijar el idioma, Whisper adivina
+    a partir del audio y en grabaciones cortas le puede errar feo (texto en
+    otro alfabeto). La app es exclusivamente de inglés."""
+    route = respx.post("https://api.openai.com/v1/audio/transcriptions").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "task": "transcribe", "language": "english", "duration": 1.2,
+                "text": "hello world", "words": [], "segments": [],
+            },
+        )
+    )
+    provider = WhisperAPIProvider(api_key="sk-test")
+
+    await provider.transcribe(b"fake-audio-bytes")
+
+    request_body = route.calls[0].request.content.decode("utf-8", errors="ignore")
+    assert 'name="language"' in request_body
+    assert "\r\nen\r\n" in request_body
+
+
+@pytest.mark.asyncio
+@respx.mock
 async def test_transcribe_raises_domain_error_on_api_failure() -> None:
     respx.post("https://api.openai.com/v1/audio/transcriptions").mock(
         return_value=httpx.Response(500, json={"error": {"message": "boom"}})

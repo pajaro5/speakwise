@@ -20,7 +20,10 @@ def _get_model(model_size: str) -> WhisperModel:
 
 
 def _transcribe_sync(model: WhisperModel, audio_path: str) -> tuple[str, list[dict]]:
-    segments, _info = model.transcribe(audio_path, word_timestamps=True)
+    # language="en" fijo: la app es exclusivamente de inglés — sin esto,
+    # Whisper adivina el idioma desde el audio y en grabaciones cortas
+    # (4s en módulo 1) a veces le erra feo (ej. transcribe en griego).
+    segments, _info = model.transcribe(audio_path, word_timestamps=True, language="en")
     text_parts: list[str] = []
     words: list[dict] = []
     for segment in segments:

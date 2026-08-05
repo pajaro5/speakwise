@@ -478,6 +478,20 @@ Suite completa: 169/169 (2 de integración deseleccionados).
 
 ---
 
+### Fase 9.11 — Whisper transcribía en otro alfabeto (idioma sin fijar) ✅
+
+El usuario reportó en módulo 1: `I heard: "Πιλάτσο!"` — griego, sin relación con nada de lo que pudo haber dicho. Preguntó si de verdad hablaba tan mal.
+
+**Bug real, no el usuario:** ni `WhisperXLocalProvider` (faster-whisper, local) ni `WhisperAPIProvider` (OpenAI, alternativa paga) fijaban el idioma esperado — Whisper adivina el idioma hablado a partir del propio audio. En grabaciones cortas (módulo 1 tiene auto-stop a los 4s) el modelo tiene poca señal para adivinar bien, y a veces le erra por completo, devolviendo texto en un alfabeto totalmente distinto. Esta app es exclusivamente de inglés — no hay nada que adivinar.
+
+**Fix:** `language="en"` fijo en ambos providers (`model.transcribe(..., language="en")` en faster-whisper; `language="en"` en el request a la API de OpenAI). Tests: `test_transcribe_pins_language_to_english` en ambos `tests/providers/test_stt_*.py`.
+
+**Verificado en vivo contra el pipeline real:** audio TTS real de "average" → `{"text": "Average.", ...}`, transcrito correctamente en inglés.
+
+Suite completa: 189/189 (3 de integración deseleccionados).
+
+---
+
 ### Fase 10 — Cierre de v1
 
 - Checklist completo de `DEFINITION-OF-DONE.md` (global + por feature de esta iteración)
