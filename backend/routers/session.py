@@ -29,6 +29,9 @@ class TutorRequest(BaseModel):
     wpm: float = 0.0
     fillers: int = 0
     stress_results: list[dict] | None = None
+    pattern_words: list[str] | None = None
+    chunk_today: str | None = None
+    week_words: list[str] | None = None
 
 
 class SessionStartRequest(BaseModel):
@@ -106,6 +109,9 @@ async def post_tutor(
         text=body.text, history=body.history, session_id=body.session_id,
         topic=body.topic, wpm=body.wpm, fillers=body.fillers,
         stress_results=body.stress_results,
+        pattern_words=body.pattern_words,
+        chunk_today=body.chunk_today,
+        week_words=body.week_words,
     )
     return {"reply": reply, "session_id": session_id}
 

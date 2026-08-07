@@ -124,6 +124,43 @@ def test_tutor_returns_200_with_reply_and_session_id(client) -> None:
     assert isinstance(body["session_id"], int)
 
 
+def test_tutor_forwards_pattern_words_chunk_today_and_week_words(client) -> None:
+    """Reportado por el usuario: "módulo 3 debe usar como insumos las
+    palabras revisadas en módulo 1 y 2". /api/tutor tiene que reenviar
+    estos 3 campos hasta el system prompt real del LLM (el frontend los
+    manda desde su todaysPlan ya cargado, en vez de que el backend los
+    recalcule desde la DB en cada turno) — Pydantic ignora en silencio
+    campos no declarados en el modelo, así que solo aceptar 200 no prueba
+    que efectivamente lleguen al tutor; hace falta capturar el prompt."""
+    test_client, _ = client
+
+    class _CapturingLLM(LLMProvider):
+        last_system_prompt: str | None = None
+
+        async def complete(self, messages: list, system: str, max_tokens: int = 400) -> str:
+            _CapturingLLM.last_system_prompt = system
+            return "ok"
+
+    app.dependency_overrides[session_router.get_llm_provider] = lambda: _CapturingLLM()
+    try:
+        response = test_client.post(
+            "/api/tutor",
+            json={
+                "text": "I go to work yesterday",
+                "pattern_words": ["average", "manage"],
+                "chunk_today": "Be careful with that.",
+                "week_words": ["thought", "went"],
+            },
+        )
+    finally:
+        app.dependency_overrides[session_router.get_llm_provider] = lambda: _FakeLLMProvider()
+
+    assert response.status_code == 200
+    assert "average" in _CapturingLLM.last_system_prompt
+    assert "Be careful with that." in _CapturingLLM.last_system_prompt
+    assert "thought" in _CapturingLLM.last_system_prompt
+
+
 def test_tutor_persists_session_in_sqlite(client) -> None:
     test_client, db_path = client
     response = test_client.post(

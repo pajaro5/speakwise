@@ -587,6 +587,27 @@ Suite completa: 237/237 (3 de integración deseleccionados).
 
 ---
 
+### Fase 9.17 — Módulo 3 sin conexión real con módulo 1 y 2 + lista de palabras ilegible ✅
+
+El usuario pidió: "el módulo 3 de free conversation debe usar como insumos las palabras revisadas en módulo 1 y 2. De momento no hay conexión entre módulos."
+
+**Investigado, 2 problemas distintos bajo el mismo síntoma:**
+
+1. **Gap total:** las palabras del patrón de pronunciación (módulo 1, ej. "average", "manage") nunca se le mencionaban al tutor de módulo 3 en absoluto — ni un solo lugar del código las pasaba.
+2. **Datos obsoletos (más sutil):** el chunk de módulo 2 SÍ se mencionaba al tutor, pero `_build_system_prompt()` volvía a llamar `build_todays_plan(conn)` en cada turno de módulo 3 — recalculando "el chunk/patrón/palabras de hoy" desde la DB en vez de usar lo que el frontend YA mostró en pantalla en módulo 1/2. Si la rotación cambiaba entre medio (más probable ahora que Fase 9.16 arregló la rotación real de módulo 2), el tutor podía terminar hablando de un chunk distinto al que el alumno practicó en esa misma sesión.
+
+**Fix (alcance confirmado con el usuario — "ambos"):** `_build_system_prompt()` (`tutor.py`) dejó de recibir `conn`/recalcular nada — ahora es una función pura que recibe `pattern_words`, `chunk_today` y `week_words` explícitos. La única fuente de verdad es el `todaysPlan` que el frontend ya cargó una sola vez al arrancar la sesión (`/api/today`), igual que ya usan módulo 1 y módulo 2 para mostrarse a sí mismos — módulo 3 ahora manda esos mismos 3 campos a `/api/tutor` en cada turno. `TutorRequest` (`routers/session.py`) gana `pattern_words`, `chunk_today`, `week_words` opcionales.
+
+Tests nuevos: `test_tutor_system_prompt_includes_explicit_chunk_today` + `test_tutor_system_prompt_does_not_recompute_chunk_from_db` (prueba directamente el bug de datos obsoletos: seedea un chunk real en la DB, no lo pasa explícito, confirma que NO aparece en el prompt) + `test_tutor_system_prompt_includes_explicit_week_words` + `test_tutor_system_prompt_includes_pattern_words_from_module_1` (`test_tutor.py`); `test_tutor_forwards_pattern_words_chunk_today_and_week_words` (`test_session.py`, con un LLM capturador — un simple 200 no alcanza para probar que Pydantic no ignora en silencio campos no reenviados); `test_app_js_free_conversation_connects_module_1_and_2_to_tutor` (`test_session_modules.py`).
+
+**Pedido aparte, mismo turno:** las palabras de módulo 1 se mostraban todas corridas en una sola línea junto con la explicación fonética, difícil de leer — se pidió que aparezcan en una lista de viñetas. `#pattern-family` pasó de `<p>` a `<ul>` (un `<ul>` dentro de un `<p>` es HTML inválido, el navegador cierra el `<p>` antes) y `renderPatternFamily()` ahora arma `<li>` por palabra en vez de un string unido con `", "`. Tests: `test_index_html_pattern_family_is_a_list_element`, `test_app_js_renders_pattern_family_as_list_items`.
+
+**Verificado en vivo:** interceptado el `fetch` real hacia `/api/tutor` desde una sesión de módulo 3 real — confirmado que el payload incluye `pattern_words: ["different", "chocolate", "vegetable", "camera", "family"]` (markup `~x~`/`*x*` correctamente removido) y `chunk_today: "I'm being careful with this."`, exactamente lo que módulo 1 y 2 mostraban en pantalla. Capturada la lista de viñetas de módulo 1 renderizada correctamente.
+
+Suite completa: 243/243 (3 de integración deseleccionados).
+
+---
+
 ### Fase 10 — Cierre de v1
 
 - Checklist completo de `DEFINITION-OF-DONE.md` (global + por feature de esta iteración)

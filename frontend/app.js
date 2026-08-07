@@ -253,10 +253,12 @@ function renderPatternFamily(family, familyStress, familyRespelling) {
       const stress = familyStress ? familyStress[i] : null;
       const respelling = familyRespelling ? familyRespelling[i] : null;
       const extras = [stress, respelling].filter(Boolean);
-      if (!extras.length) return marked;
-      return `${marked} <small>(${extras.map(escapeHtml).join(" · ")})</small>`;
+      const line = extras.length
+        ? `${marked} <small>(${extras.map(escapeHtml).join(" · ")})</small>`
+        : marked;
+      return `<li>${line}</li>`;
     })
-    .join(", ");
+    .join("");
 }
 
 function stripMarkdown(text) {
@@ -365,6 +367,11 @@ async function handleFreeConversationRecording(audioBlob) {
     text: transcript.text, history, session_id: sessionId,
     wpm: transcript.wpm, fillers: transcript.fillers,
     stress_results: transcript.stress_results,
+    pattern_words: todaysPlan.pattern_focus
+      ? todaysPlan.pattern_focus.family.map(stripMarkup)
+      : null,
+    chunk_today: todaysPlan.chunk_today ? todaysPlan.chunk_today.chunk : null,
+    week_words: (todaysPlan.week_words || []).map((w) => w.form),
   });
   sessionId = tutor.session_id;
   const cleanReply = stripMarkdown(tutor.reply);

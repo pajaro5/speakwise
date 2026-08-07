@@ -180,6 +180,21 @@ def test_app_js_speed_selection_applies_to_pattern_listen_button() -> None:
     assert "playbackSpeed" in listener
 
 
+def test_index_html_pattern_family_is_a_list_element() -> None:
+    """El usuario pidió que las palabras del patrón aparezcan una por
+    línea (viñetas), no todas corridas junto con la explicación fonética
+    -- para eso #pattern-family tiene que ser un <ul>, no un <p> (un <ul>
+    dentro de un <p> es HTML inválido, el navegador cierra el <p> solo)."""
+    html = _read("index.html")
+    assert '<ul id="pattern-family">' in html
+
+
+def test_app_js_renders_pattern_family_as_list_items() -> None:
+    js = _read("app.js")
+    assert "<li>" in js
+    assert "</li>" in js
+
+
 def test_app_js_renders_pattern_family_stress_and_respelling() -> None:
     """El usuario pidió mostrar la sílaba tónica en mayúsculas (ej.
     "aVERage") y, junto al IPA, una guía de pronunciación simple sin
@@ -260,6 +275,20 @@ def test_app_js_free_conversation_logs_chunk_spontaneous_use() -> None:
     handler = handler.split("if (\"serviceWorker\"")[0]
     assert 'event: "chunk_spontaneous"' in handler
     assert "todaysPlan.chunk_today" in handler
+
+
+def test_app_js_free_conversation_connects_module_1_and_2_to_tutor() -> None:
+    """Reportado por el usuario: "módulo 3 debe usar como insumos las
+    palabras revisadas en módulo 1 y 2 — de momento no hay conexión entre
+    módulos". El tutor necesita las palabras del patrón (módulo 1) y el
+    chunk del día (módulo 2), tal cual el frontend ya los tiene en
+    todaysPlan (no un recálculo del backend, que puede haber rotado)."""
+    js = _read("app.js")
+    handler = js.split("async function handleFreeConversationRecording")[1]
+    handler = handler.split("if (\"serviceWorker\"")[0]
+    assert "pattern_words:" in handler
+    assert "chunk_today:" in handler
+    assert "todaysPlan.pattern_focus" in handler
 
 
 def test_app_js_free_conversation_sends_week_words_and_stress_to_tutor() -> None:

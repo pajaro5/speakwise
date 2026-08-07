@@ -3,7 +3,6 @@ import pytest
 from backend import seed
 from backend.database import db_connection
 from backend.providers.base import LLMProvider
-from backend.services.curriculum import build_todays_plan
 from backend.services.tutor import get_tutor_reply
 
 
@@ -24,16 +23,40 @@ def seeded_db_path(tmp_path) -> str:
 
 
 @pytest.mark.asyncio
-async def test_tutor_system_prompt_includes_todays_chunk(seeded_db_path: str) -> None:
+async def test_tutor_system_prompt_includes_explicit_chunk_today(seeded_db_path: str) -> None:
+    """El chunk tiene que ser el que el frontend YA mostró en módulo 2 (lo
+    manda explícito), no uno recalculado en el backend — antes se llamaba
+    a build_todays_plan(conn) de nuevo en cada turno de módulo 3, que podía
+    devolver un chunk distinto si la rotación cambió entre medio (más
+    probable ahora que la rotación de módulo 2 funciona de verdad).
+    Reportado por el usuario: "no hay conexión entre módulos"."""
     llm = _CapturingLLM()
     with db_connection(seeded_db_path) as conn:
-        plan = build_todays_plan(conn)
+        await get_tutor_reply(
+            conn, llm,
+            text="hello", history=[], session_id=None, topic="", wpm=0.0, fillers=0,
+            chunk_today="Be careful with that.",
+        )
+
+    assert "Be careful with that." in llm.last_system_prompt
+
+
+@pytest.mark.asyncio
+async def test_tutor_system_prompt_does_not_recompute_chunk_from_db(
+    seeded_db_path: str,
+) -> None:
+    """Sin chunk_today explícito, el prompt no debe inventar uno leyendo
+    la DB de nuevo — la fuente de verdad es lo que el frontend ya mostró
+    en pantalla, no un recálculo que puede haber rotado."""
+    llm = _CapturingLLM()
+    with db_connection(seeded_db_path) as conn:
+        db_chunk = conn.execute("SELECT chunk FROM chunks LIMIT 1").fetchone()["chunk"]
         await get_tutor_reply(
             conn, llm,
             text="hello", history=[], session_id=None, topic="", wpm=0.0, fillers=0,
         )
 
-    assert plan["chunk_today"]["chunk"] in llm.last_system_prompt
+    assert db_chunk not in llm.last_system_prompt
 
 
 @pytest.mark.asyncio
@@ -67,17 +90,39 @@ async def test_tutor_system_prompt_forbids_markdown(seeded_db_path: str) -> None
 
 
 @pytest.mark.asyncio
-async def test_tutor_system_prompt_includes_todays_word_forms(seeded_db_path: str) -> None:
+async def test_tutor_system_prompt_includes_explicit_week_words(seeded_db_path: str) -> None:
     llm = _CapturingLLM()
     with db_connection(seeded_db_path) as conn:
-        plan = build_todays_plan(conn)
         await get_tutor_reply(
             conn, llm,
             text="hello", history=[], session_id=None, topic="", wpm=0.0, fillers=0,
+            week_words=["thought", "went"],
         )
 
-    first_word = plan["week_words"][0]["form"]
-    assert first_word in llm.last_system_prompt
+    assert "thought" in llm.last_system_prompt
+    assert "went" in llm.last_system_prompt
+
+
+@pytest.mark.asyncio
+async def test_tutor_system_prompt_includes_pattern_words_from_module_1(
+    seeded_db_path: str,
+) -> None:
+    """Reportado por el usuario: "módulo 3 debe usar como insumos las
+    palabras revisadas en módulo 1 y 2 — de momento no hay conexión entre
+    módulos". Las palabras del patrón de pronunciación (módulo 1) nunca se
+    le mencionaban al tutor — gap total, no solo un problema de datos
+    obsoletos como el del chunk."""
+    llm = _CapturingLLM()
+    with db_connection(seeded_db_path) as conn:
+        await get_tutor_reply(
+            conn, llm,
+            text="hello", history=[], session_id=None, topic="", wpm=0.0, fillers=0,
+            pattern_words=["average", "manage", "village"],
+        )
+
+    assert "average" in llm.last_system_prompt
+    assert "manage" in llm.last_system_prompt
+    assert "módulo 1" in llm.last_system_prompt.lower()
 
 
 @pytest.mark.asyncio
