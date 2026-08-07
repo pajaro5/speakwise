@@ -32,12 +32,13 @@ CREATE TABLE IF NOT EXISTS word_properties (
 );
 
 CREATE TABLE IF NOT EXISTS chunks (
-    id       INTEGER PRIMARY KEY,
-    word_id  INTEGER REFERENCES words(id),
-    chunk    TEXT NOT NULL,
-    tense    TEXT,
-    function TEXT,
-    level    INTEGER DEFAULT 1
+    id         INTEGER PRIMARY KEY,
+    word_id    INTEGER REFERENCES words(id),
+    chunk      TEXT NOT NULL,
+    tense      TEXT,
+    function   TEXT,
+    level      INTEGER DEFAULT 1,
+    meaning_es TEXT
 );
 
 CREATE TABLE IF NOT EXISTS phonetic_patterns (
@@ -137,6 +138,11 @@ def _migrate(conn: sqlite3.Connection) -> None:
     existing = {row["name"] for row in conn.execute("PRAGMA table_info(phonetic_patterns)")}
     if "family_stress" not in existing:
         conn.execute("ALTER TABLE phonetic_patterns ADD COLUMN family_stress TEXT")
+        conn.commit()
+
+    existing = {row["name"] for row in conn.execute("PRAGMA table_info(chunks)")}
+    if "meaning_es" not in existing:
+        conn.execute("ALTER TABLE chunks ADD COLUMN meaning_es TEXT")
         conn.commit()
 
 

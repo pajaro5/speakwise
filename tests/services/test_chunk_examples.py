@@ -67,6 +67,24 @@ async def test_get_chunk_examples_raises_when_a_field_is_missing() -> None:
         await get_chunk_examples(llm, chunk="Be careful with that.", function="imperative")
 
 
+@pytest.mark.asyncio
+async def test_get_chunk_examples_sends_meaning_when_given() -> None:
+    """Los chunks ahora son modismos curados (ej. "Not my circus, not my
+    monkeys.") — mandarle el significado real al LLM (no solo un tag de
+    función) ayuda a que genere ejemplos que usen el modismo con el
+    sentido idiomático correcto, no una interpretación literal."""
+    llm = _CapturingLLM(json.dumps({"sentence": "x", "paragraph": "y", "conversation": "z"}))
+
+    await get_chunk_examples(
+        llm,
+        chunk="Not my circus, not my monkeys.",
+        function="says a problem is not your responsibility",
+        meaning_es="No es mi problema ni mi responsabilidad.",
+    )
+
+    assert "No es mi problema ni mi responsabilidad." in llm.last_messages[0]["content"]
+
+
 def test_system_prompt_forbids_spanish() -> None:
     """Reportado por el usuario: "todo debe estar en inglés" — el prompt ya
     pedía inglés pero no era explícito en prohibir mezclar español."""

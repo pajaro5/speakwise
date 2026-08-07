@@ -18,9 +18,17 @@ SYSTEM_PROMPT = (
 REQUIRED_KEYS = ("sentence", "paragraph", "conversation")
 
 
-async def get_chunk_examples(llm: LLMProvider, *, chunk: str, function: str) -> dict:
+async def get_chunk_examples(
+    llm: LLMProvider, *, chunk: str, function: str, meaning_es: str | None = None
+) -> dict:
+    content = f'Chunk: "{chunk}"\nFunción: {function}'
+    if meaning_es:
+        # Los chunks son modismos curados — el significado real evita que
+        # el LLM genere ejemplos con una interpretación literal en vez de
+        # la idiomática (ej. "circus"/"monkeys" tomados al pie de la letra).
+        content += f"\nSignificado: {meaning_es}"
     raw = await llm.complete(
-        messages=[{"role": "user", "content": f'Chunk: "{chunk}"\nFunción: {function}'}],
+        messages=[{"role": "user", "content": content}],
         system=SYSTEM_PROMPT,
     )
     try:

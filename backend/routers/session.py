@@ -41,6 +41,7 @@ class SessionStartRequest(BaseModel):
 class ChunkExamplesRequest(BaseModel):
     chunk: str
     function: str
+    meaning_es: str | None = None
 
 
 class LogRequest(BaseModel):
@@ -120,7 +121,9 @@ async def post_tutor(
 async def post_chunk_examples(
     body: ChunkExamplesRequest, llm: LLMProvider = Depends(get_llm_provider)
 ) -> dict:
-    return await get_chunk_examples(llm, chunk=body.chunk, function=body.function)
+    return await get_chunk_examples(
+        llm, chunk=body.chunk, function=body.function, meaning_es=body.meaning_es
+    )
 
 
 @router.post("/log")

@@ -25,6 +25,26 @@ def test_index_html_has_pattern_module_elements() -> None:
         assert f'id="{element_id}"' in html, f"falta #{element_id}"
 
 
+def test_index_html_has_chunk_meaning_element() -> None:
+    """El usuario reportó que el "chunk of the day" (drilling de gramática
+    por plantilla) no aportaba valor real — se reemplazó por modismos
+    curados, y pidió que se explique su significado."""
+    html = _read("index.html")
+    assert 'id="chunk-meaning"' in html
+
+
+def test_app_js_shows_chunk_meaning() -> None:
+    js = _read("app.js")
+    assert "chunkMeaningEl.textContent = chunk.meaning_es" in js
+
+
+def test_app_js_sends_meaning_es_to_chunk_examples() -> None:
+    js = _read("app.js")
+    handler = js.split("async function loadChunkExamples")[1]
+    handler = handler.split("async function handlePatternRecording")[0]
+    assert "meaning_es: todaysPlan.chunk_today.meaning_es" in handler
+
+
 def test_index_html_has_chunk_module_elements() -> None:
     html = _read("index.html")
     for element_id in ["chunk-text", "listen-chunk-btn", "record-chunk-btn", "chunk-feedback"]:

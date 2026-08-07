@@ -59,7 +59,7 @@ def test_today_chunk_matches_contract_shape(client: TestClient) -> None:
     body = response.json()
 
     assert set(body["chunk_today"].keys()) == {
-        "chunk", "function", "spontaneous_uses", "produced_uses",
+        "chunk", "function", "meaning_es", "spontaneous_uses", "produced_uses",
     }
 
 

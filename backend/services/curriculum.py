@@ -114,18 +114,19 @@ def _chunk_of_the_day(conn: sqlite3.Connection) -> dict | None:
     0 para todos los chunks hasta que haya uso espontáneo real, y el
     desempate caía en el rango de la palabra (que nunca cambia) — bug real
     reportado por el usuario: módulo 2 siempre repetía "Be careful with
-    that." (rank más bajo del corpus, "be")."""
+    that." (rank más bajo del corpus, "be"). Los chunks ya no están atados
+    a una palabra del corpus (ahora son modismos curados, no drilling de
+    gramática) — sin JOIN contra words, desempate final por c.id (orden
+    de curado en idioms.csv)."""
     row = conn.execute(
         """
-        SELECT c.chunk, c.function,
+        SELECT c.chunk, c.function, c.meaning_es,
                COUNT(CASE WHEN s.chunk_spontaneous = 1 THEN 1 END) AS spontaneous_uses,
                COUNT(CASE WHEN s.chunk_produced = 1 THEN 1 END) AS produced_uses
         FROM chunks c
-        JOIN words w ON w.id = c.word_id
         LEFT JOIN sessions s ON s.chunk_used = c.chunk
-        WHERE w.rank <= 150
         GROUP BY c.id
-        ORDER BY spontaneous_uses ASC, produced_uses ASC, w.rank ASC
+        ORDER BY spontaneous_uses ASC, produced_uses ASC, c.id ASC
         LIMIT 1
         """
     ).fetchone()
@@ -134,6 +135,7 @@ def _chunk_of_the_day(conn: sqlite3.Connection) -> dict | None:
     return {
         "chunk": row["chunk"],
         "function": row["function"],
+        "meaning_es": row["meaning_es"],
         "spontaneous_uses": row["spontaneous_uses"],
         "produced_uses": row["produced_uses"],
     }

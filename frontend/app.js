@@ -17,6 +17,7 @@ const nextToModule2Btn = document.getElementById("next-to-module-2-btn");
 
 const module2El = document.getElementById("module-2");
 const chunkTextEl = document.getElementById("chunk-text");
+const chunkMeaningEl = document.getElementById("chunk-meaning");
 const chunkFunctionEl = document.getElementById("chunk-function");
 const listenChunkBtn = document.getElementById("listen-chunk-btn");
 const recordChunkBtn = document.getElementById("record-chunk-btn");
@@ -141,6 +142,7 @@ async function startSession() {
   const chunk = todaysPlan.chunk_today;
   if (chunk) {
     chunkTextEl.textContent = chunk.chunk;
+    chunkMeaningEl.textContent = chunk.meaning_es;
     chunkFunctionEl.textContent = chunk.function;
   }
   conversationStartersEl.textContent = (todaysPlan.conversation_starters || []).join(" · ");
@@ -285,6 +287,7 @@ async function loadChunkExamples() {
     const examples = await postJson("/api/chunk-examples", {
       chunk: todaysPlan.chunk_today.chunk,
       function: todaysPlan.chunk_today.function,
+      meaning_es: todaysPlan.chunk_today.meaning_es,
     });
     const chunk = todaysPlan.chunk_today.chunk;
     chunkExampleSentenceEl.innerHTML = boldChunkOccurrences(examples.sentence, chunk);

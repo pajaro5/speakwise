@@ -135,9 +135,12 @@ def test_chunk_of_the_day_returns_a_chunk(seeded_db_path: str) -> None:
         chunk = _chunk_of_the_day(conn)
 
     assert chunk is not None
-    assert set(chunk.keys()) == {"chunk", "function", "spontaneous_uses", "produced_uses"}
+    assert set(chunk.keys()) == {
+        "chunk", "function", "meaning_es", "spontaneous_uses", "produced_uses",
+    }
     assert chunk["spontaneous_uses"] == 0
     assert chunk["produced_uses"] == 0
+    assert chunk["meaning_es"]
 
 
 def test_chunk_of_the_day_prefers_least_spontaneous_uses(seeded_db_path: str) -> None:

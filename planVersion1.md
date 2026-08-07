@@ -622,6 +622,30 @@ Suite completa: 243/243 (3 de integración deseleccionados, la nueva no requiri�
 
 ---
 
+### Fase 9.19 — Chunk of the day reemplazado por modismos reales con significado ✅
+
+El usuario preguntó de dónde salía el "chunk of the day" y señaló que no aportaba valor: "por ejemplo debe mostrar frases tipo 'Not my circus, not my monkeys', explicar su significado. Recordá que no sos un mesero que toma pedidos, tu rol es asesorar, sugerir y construir."
+
+**Diagnóstico:** el chunk salía de `seed.py`, generado 100% mecánicamente por plantilla — 4 plantillas de tiempo verbal (`"I {form} this every day."`, etc.) aplicadas a las 50 palabras top del corpus × 5 tiempos = 200 filas. Era drilling de conjugación, no chunks idiomáticos reales de inglés hablado.
+
+**Recomendación propuesta y confirmada por el usuario ("reemplaza"):** reemplazar el contenido generado por un corpus curado de 30 modismos de uso real, cada uno con su significado en español. Se reutiliza toda la infraestructura de rotación de Fase 9.16 (`produced_uses`/`spontaneous_uses`) — solo cambia qué datos alimentan la tabla `chunks`.
+
+**Fix:**
+- `corpus/idioms.csv` (nuevo): 30 modismos curados a mano (`idiom, meaning_es, function`) — "Not my circus, not my monkeys.", "It's not rocket science.", "Piece of cake.", "Break a leg!", etc.
+- `chunks.meaning_es` (columna nueva, migración vía `_migrate()`).
+- `seed.py`: `seed_chunks()` reescrito — ya no genera por plantilla (se eliminaron `CHUNK_TEMPLATES`/`IRREGULAR_CHUNKS`), carga `idioms.csv` e identifica cada fila por su propio texto (no depende de una palabra del corpus — `word_id`/`tense` quedan `NULL`). **Bug real encontrado en vivo tras el primer reseed:** los ~200 chunks viejos (generados por la versión anterior) no se borraban, solo se agregaban los modismos al lado — como todos empataban en `spontaneous_uses`/`produced_uses = 0`, el desempate por id a veces elegía uno viejo, y `/api/today` seguía sirviendo "Yesterday I was tired." después de reseedear. Arreglado con `DELETE FROM chunks WHERE word_id IS NOT NULL` al reseedear (los modismos nuevos son identificables porque `word_id` siempre es `NULL` en ellos).
+- `_chunk_of_the_day()` (`curriculum.py`): ya no hace `JOIN` contra `words`/`WHERE rank <= 150` (los modismos no están atados a una palabra) — desempate final por `c.id` (orden de curado). Expone `meaning_es`.
+- `chunk_examples.py`: `get_chunk_examples()` recibe `meaning_es` opcional y lo manda al LLM — evita que genere ejemplos con interpretación literal del modismo en vez de la idiomática (verificado en vivo: para "Not my circus, not my monkeys." generó ejemplos usando correctamente el sentido de "no es mi problema", no una escena literal de circo).
+- Frontend: nuevo `#chunk-meaning` en módulo 2, mostrado junto al chunk; `loadChunkExamples()` manda `meaning_es`.
+
+Tests nuevos/reescritos: `test_chunks_are_curated_idioms_with_meaning` (reemplaza `test_chunks_at_least_150_with_function_and_level`), `test_idioms_are_not_tied_to_a_vocab_word`, `test_reseeding_removes_old_word_based_chunks` (cubre directamente el bug encontrado en vivo), `test_reseeding_updates_idiom_meaning_without_duplicating` (reemplazan los tests de "be"/word-based reseed) — `test_seed.py`; `test_chunk_of_the_day_*` actualizados — `test_curriculum.py`; `test_get_chunk_examples_sends_meaning_when_given` — `test_chunk_examples.py`; `test_chunk_examples_forwards_meaning_es_to_llm` — `test_session.py`; `test_index_html_has_chunk_meaning_element` + `test_app_js_shows_chunk_meaning` + `test_app_js_sends_meaning_es_to_chunk_examples` — `test_session_modules.py`.
+
+**Verificado en vivo:** re-seedeada la DB real (dos veces — la primera confirmó el bug del punto anterior, la segunda ya con el fix lo corrigió), `/api/today` sirviendo "Not my circus, not my monkeys." con su significado; capturado en pantalla el módulo 2 completo (chunk, significado en español, función, y los 3 ejemplos generados usando correctamente el sentido idiomático).
+
+Suite completa: 249/249 (3 de integración deseleccionados).
+
+---
+
 ### Fase 10 — Cierre de v1
 
 - Checklist completo de `DEFINITION-OF-DONE.md` (global + por feature de esta iteración)

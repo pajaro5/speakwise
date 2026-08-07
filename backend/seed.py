@@ -10,26 +10,6 @@ CORPUS_DIR = Path(__file__).resolve().parent.parent / "corpus"
 
 TENSES = ["base", "third_sg", "progressive", "past", "past_participle"]
 
-# (template, function) por tense — usados para generar los chunks del ITER-1.
-CHUNK_TEMPLATES = {
-    "base": ("I {form} this every day.", "habit"),
-    "third_sg": ("She {form} this every day.", "habit_third_person"),
-    "progressive": ("I'm {form} it right now.", "present_action"),
-    "past": ("Yesterday I {form} it.", "past_narration"),
-}
-
-# El verbo "be" es cópula (no toma objeto directo como "it"/"this"), así que
-# los templates genéricos de arriba producen frases no gramaticales (p. ej.
-# "I be this every day."). Se curan a mano por tense.
-IRREGULAR_CHUNKS = {
-    "be": {
-        "base": ("Be careful with that.", "imperative"),
-        "third_sg": ("She is happy today.", "habit_third_person"),
-        "progressive": ("I'm being careful with this.", "present_action"),
-        "past": ("Yesterday I was tired.", "past_narration"),
-    },
-}
-
 _cmu = cmudict.dict()
 
 
@@ -55,6 +35,11 @@ def load_words_csv() -> list[dict]:
 
 def load_patterns_csv() -> list[dict]:
     with open(CORPUS_DIR / "patterns.csv", newline="", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
+
+
+def load_idioms_csv() -> list[dict]:
+    with open(CORPUS_DIR / "idioms.csv", newline="", encoding="utf-8") as f:
         return list(csv.DictReader(f))
 
 
@@ -131,42 +116,43 @@ def seed_patterns(conn: sqlite3.Connection, rows: list[dict]) -> None:
 
 
 def seed_chunks(conn: sqlite3.Connection, rows: list[dict]) -> None:
+    """El "chunk of the day" ya no se genera por plantilla a partir del
+    vocabulario (word×tense, ej. "I think this every day.") — el usuario
+    reportó que eso no aporta valor real de conversación, y pidió
+    expresiones idiomáticas de uso real con su significado explicado.
+    Cada modismo se identifica por su propio texto (no depende de una
+    palabra del corpus — word_id/tense quedan NULL). Los chunks viejos
+    (word_id NOT NULL, generados por la versión anterior) se borran acá —
+    bug real encontrado en vivo: si se dejaban, seguían empatando con los
+    modismos nuevos en spontaneous_uses/produced_uses=0 y a veces ganaban
+    el desempate por id, así que el chunk "de hoy" seguía siendo uno
+    viejo aunque el corpus ya no lo generara más."""
+    conn.execute("DELETE FROM chunks WHERE word_id IS NOT NULL")
     for row in rows:
-        word = conn.execute(
-            "SELECT id FROM words WHERE lemma = ?", (row["lemma"],)
+        existing = conn.execute(
+            "SELECT id FROM chunks WHERE chunk = ?", (row["idiom"],)
         ).fetchone()
-        word_id = word["id"]
-        overrides = IRREGULAR_CHUNKS.get(row["lemma"], {})
-        for tense, (template, function) in CHUNK_TEMPLATES.items():
-            if tense in overrides:
-                chunk_text, function = overrides[tense]
-            else:
-                chunk_text = template.format(form=row[tense])
-            existing = conn.execute(
-                "SELECT id FROM chunks WHERE word_id = ? AND tense = ?",
-                (word_id, tense),
-            ).fetchone()
-            if existing:
-                conn.execute(
-                    "UPDATE chunks SET chunk = ?, function = ? WHERE id = ?",
-                    (chunk_text, function, existing["id"]),
-                )
-                continue
+        if existing:
             conn.execute(
-                "INSERT INTO chunks (word_id, chunk, tense, function, level) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (word_id, chunk_text, tense, function, 1),
+                "UPDATE chunks SET function = ?, meaning_es = ? WHERE id = ?",
+                (row["function"], row["meaning_es"], existing["id"]),
             )
+            continue
+        conn.execute(
+            "INSERT INTO chunks (chunk, function, meaning_es, level) VALUES (?, ?, ?, ?)",
+            (row["idiom"], row["function"], row["meaning_es"], 1),
+        )
     conn.commit()
 
 
 def run(db_path: str | None = None) -> None:
     words = load_words_csv()
     patterns = load_patterns_csv()
+    idioms = load_idioms_csv()
     with db_connection(db_path) as conn:
         seed_words(conn, words)
         seed_patterns(conn, patterns)
-        seed_chunks(conn, words)
+        seed_chunks(conn, idioms)
 
 
 if __name__ == "__main__":

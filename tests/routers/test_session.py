@@ -318,6 +318,36 @@ def test_chunk_examples_returns_three_examples(client) -> None:
     assert response.json() == {"sentence": "s", "paragraph": "p", "conversation": "c"}
 
 
+def test_chunk_examples_forwards_meaning_es_to_llm(client) -> None:
+    """Los chunks ahora son modismos curados con significado (meaning_es)
+    — /api/chunk-examples tiene que reenviarlo al LLM para que genere
+    ejemplos con el sentido idiomático correcto."""
+    test_client, _ = client
+
+    class _CapturingLLM(LLMProvider):
+        last_messages = None
+
+        async def complete(self, messages, system, max_tokens=400) -> str:
+            import json
+
+            _CapturingLLM.last_messages = messages
+            return json.dumps({"sentence": "s", "paragraph": "p", "conversation": "c"})
+
+    app.dependency_overrides[session_router.get_llm_provider] = lambda: _CapturingLLM()
+
+    response = test_client.post(
+        "/api/chunk-examples",
+        json={
+            "chunk": "Not my circus, not my monkeys.",
+            "function": "says a problem is not your responsibility",
+            "meaning_es": "No es mi problema ni mi responsabilidad.",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "No es mi problema ni mi responsabilidad." in _CapturingLLM.last_messages[0]["content"]
+
+
 def test_chunk_examples_returns_503_when_llm_returns_bad_json(client) -> None:
     test_client, _ = client
 

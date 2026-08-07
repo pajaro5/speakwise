@@ -43,14 +43,19 @@ def test_phonetic_patterns_exactly_6(seeded_db_path: str) -> None:
     assert count == 6
 
 
-def test_chunks_at_least_150_with_function_and_level(seeded_db_path: str) -> None:
+def test_chunks_are_curated_idioms_with_meaning(seeded_db_path: str) -> None:
+    """El usuario reportó que el "chunk of the day" generado por plantilla
+    ("I think this every day.") no aporta valor real — pidió reemplazarlo
+    por expresiones idiomáticas de uso real, con su significado explicado.
+    Ya no se generan mecánicamente por palabra×tiempo verbal (200+ filas),
+    ahora vienen curadas a mano desde corpus/idioms.csv, con meaning_es."""
     with db_connection(seeded_db_path) as conn:
         total = conn.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
         missing = conn.execute(
-            "SELECT COUNT(*) FROM chunks WHERE function IS NULL OR level IS NULL"
+            "SELECT COUNT(*) FROM chunks WHERE function IS NULL OR meaning_es IS NULL"
         ).fetchone()[0]
 
-    assert total >= 150
+    assert total >= 25
     assert missing == 0
 
 
@@ -66,7 +71,7 @@ def test_seed_is_idempotent(seeded_db_path: str) -> None:
     assert words == 50
     assert forms >= 150
     assert patterns == 6
-    assert chunks >= 150
+    assert chunks >= 25
 
 
 def test_lfc_focus_is_the_primary_stressed_vowel() -> None:
@@ -77,34 +82,58 @@ def test_lfc_focus_is_the_primary_stressed_vowel() -> None:
     assert stress_syl == 0
 
 
-def test_be_chunks_are_grammatical(tmp_path) -> None:
-    """El template genérico produce "I be this every day." para el verbo
-    irregular "be" — no es gramatical y el usuario reportó que no sabía qué
-    decir por falta de contexto. "be" necesita chunks curados a mano."""
+def test_idioms_are_not_tied_to_a_vocab_word(seeded_db_path: str) -> None:
+    """Los modismos ya no están atados a una palabra del top-150 (a
+    diferencia del drilling de gramática anterior) — word_id queda NULL,
+    _chunk_of_the_day() ya no hace JOIN contra words."""
+    with db_connection(seeded_db_path) as conn:
+        row = conn.execute(
+            "SELECT word_id FROM chunks WHERE chunk LIKE 'Not my circus%'"
+        ).fetchone()
+
+    assert row is not None
+    assert row["word_id"] is None
+
+
+def test_reseeding_removes_old_word_based_chunks(tmp_path) -> None:
+    """Bug real encontrado en vivo: una DB ya seedeada con la versión
+    anterior (chunks generados por plantilla word×tiempo, ej. "Yesterday I
+    was tired.", con word_id NOT NULL) seguía sirviendo esos chunks viejos
+    como "el de hoy" después de reseedear con los modismos nuevos — nunca
+    se borraban, solo se agregaban los nuevos al lado. Como todos
+    empataban en spontaneous_uses/produced_uses=0, el desempate por id
+    terminaba eligiendo uno de los viejos (ids más bajos)."""
     db_path = str(tmp_path / "seed_test.db")
     seed.run(db_path)
     with db_connection(db_path) as conn:
-        rows = conn.execute(
-            "SELECT chunk FROM chunks c JOIN words w ON w.id = c.word_id "
-            "WHERE w.lemma = 'be'"
-        ).fetchall()
-    chunks = [r["chunk"] for r in rows]
-    assert not any(c.startswith("I be ") for c in chunks), chunks
-    assert not any(c.startswith("I'm being it") for c in chunks), chunks
-    assert not any(c == "Yesterday I was it." for c in chunks), chunks
+        word_id = conn.execute("SELECT id FROM words LIMIT 1").fetchone()["id"]
+        conn.execute(
+            "INSERT INTO chunks (word_id, chunk, tense, function, level) "
+            "VALUES (?, 'Yesterday I was tired.', 'past', 'past_narration', 1)",
+            (word_id,),
+        )
+        conn.commit()
+
+    seed.run(db_path)
+
+    with db_connection(db_path) as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) AS n FROM chunks WHERE word_id IS NOT NULL"
+        ).fetchone()
+
+    assert row["n"] == 0
 
 
-def test_reseeding_an_already_seeded_db_does_not_duplicate_overridden_chunks(tmp_path) -> None:
-    """Re-seedear una DB que ya tiene el chunk viejo (creado antes de que
-    existiera IRREGULAR_CHUNKS, con function="habit") no debe dejarlo
-    huérfano junto al nuevo — debe reemplazarlo, no duplicarlo. Reproduce
-    el estado real que tenía la DB del usuario."""
+def test_reseeding_updates_idiom_meaning_without_duplicating(tmp_path) -> None:
+    """Re-seedear una DB que ya tiene el modismo (con un meaning_es viejo)
+    debe actualizarlo, no duplicarlo — mismo patrón ya establecido para
+    chunks/patterns (identificado por el texto del chunk, que es único)."""
     db_path = str(tmp_path / "seed_test.db")
     seed.run(db_path)
     with db_connection(db_path) as conn:
         conn.execute(
-            "UPDATE chunks SET chunk = 'I be this every day.', function = 'habit' "
-            "WHERE word_id = (SELECT id FROM words WHERE lemma = 'be') AND tense = 'base'"
+            "UPDATE chunks SET meaning_es = 'significado viejo' "
+            "WHERE chunk = 'Piece of cake.'"
         )
         conn.commit()
 
@@ -112,11 +141,10 @@ def test_reseeding_an_already_seeded_db_does_not_duplicate_overridden_chunks(tmp
 
     with db_connection(db_path) as conn:
         rows = conn.execute(
-            "SELECT chunk FROM chunks c JOIN words w ON w.id = c.word_id "
-            "WHERE w.lemma = 'be' AND c.tense = 'base'"
+            "SELECT meaning_es FROM chunks WHERE chunk = 'Piece of cake.'"
         ).fetchall()
-    assert len(rows) == 1, [r["chunk"] for r in rows]
-    assert rows[0]["chunk"] == "Be careful with that."
+    assert len(rows) == 1, rows
+    assert rows[0]["meaning_es"] != "significado viejo"
 
 
 def test_pattern_family_words_have_marked_syllables(seeded_db_path: str) -> None:
