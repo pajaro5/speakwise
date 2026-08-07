@@ -132,6 +132,97 @@ def test_log_pattern_practiced_logs_phoneme_errors(db_path: str) -> None:
     assert rows[0]["word"] == "banana"
 
 
+def test_log_chunk_spontaneous_marks_when_chunk_appears_unprompted(db_path: str) -> None:
+    """Reportado por el usuario: módulo 2 siempre repite el mismo chunk —
+    causa real: la detección de uso espontáneo en módulo 3 nunca se
+    construyó (DESIGN.md la definía, pero el código para chequearla no
+    existía). Este test cubre la pieza real: si el chunk del día aparece
+    en la transcripción de conversación libre (módulo 3), se marca
+    chunk_spontaneous=1 en la sesión."""
+    from backend.database import create_session
+    from backend.services.log import log_chunk_spontaneous_use
+
+    with db_connection(db_path) as conn:
+        session_id = create_session(
+            conn, date="2026-08-07", topic="", transcript="", wpm=0.0, fillers=0, feedback="",
+        )
+
+        used = log_chunk_spontaneous_use(
+            conn,
+            session_id=session_id,
+            chunk="Be careful with that.",
+            transcript="Yeah, be careful with that, it's heavy.",
+        )
+
+        row = conn.execute("SELECT chunk_spontaneous FROM sessions WHERE id = ?", (session_id,)).fetchone()
+
+    assert used is True
+    assert row["chunk_spontaneous"] == 1
+
+
+def test_log_chunk_spontaneous_does_not_mark_when_chunk_absent(db_path: str) -> None:
+    from backend.database import create_session
+    from backend.services.log import log_chunk_spontaneous_use
+
+    with db_connection(db_path) as conn:
+        session_id = create_session(
+            conn, date="2026-08-07", topic="", transcript="", wpm=0.0, fillers=0, feedback="",
+        )
+
+        used = log_chunk_spontaneous_use(
+            conn, session_id=session_id, chunk="Be careful with that.", transcript="I like pizza",
+        )
+
+        row = conn.execute("SELECT chunk_spontaneous FROM sessions WHERE id = ?", (session_id,)).fetchone()
+
+    assert used is False
+    assert row["chunk_spontaneous"] is None
+
+
+def test_log_words_used_marks_matching_week_words(db_path: str) -> None:
+    """Reportado por el usuario: "sigue repitiendo el chunk... seguro pasa
+    lo mismo en módulo 3" — sí: user_progress nunca se escribía en ningún
+    lado, así que las week_words de módulo 3 nunca cambiaban. Solo se
+    marcan las formas que SÍ aparecieron (evidencia positiva) — no se
+    penaliza la ausencia, el alumno puede simplemente no haber tenido
+    ocasión de usar una palabra en esa charla en particular."""
+    from backend.services.log import log_words_used
+
+    with db_connection(db_path) as conn:
+        word_id = conn.execute(
+            "INSERT INTO words (lemma, rank, type) VALUES ('think', 1, 'verb')"
+        ).lastrowid
+        thought_id = conn.execute(
+            "INSERT INTO word_forms (word_id, form, tense) VALUES (?, 'thought', 'past')",
+            (word_id,),
+        ).lastrowid
+        went_id = conn.execute(
+            "INSERT INTO word_forms (word_id, form, tense) VALUES (?, 'went', 'past')",
+            (word_id,),
+        ).lastrowid
+        conn.commit()
+
+        used = log_words_used(
+            conn,
+            transcript="I thought about it yesterday.",
+            week_words=[
+                {"form_id": thought_id, "form": "thought"},
+                {"form_id": went_id, "form": "went"},
+            ],
+        )
+
+        row = conn.execute(
+            "SELECT COUNT(*) AS n FROM user_progress WHERE form_id = ?", (thought_id,)
+        ).fetchone()
+        none_row = conn.execute(
+            "SELECT COUNT(*) AS n FROM user_progress WHERE form_id = ?", (went_id,)
+        ).fetchone()
+
+    assert used == ["thought"]
+    assert row["n"] == 1
+    assert none_row["n"] == 0
+
+
 def test_log_chunk_used_marks_produced_when_chunk_in_transcript(db_path: str) -> None:
     from backend.database import create_session
 

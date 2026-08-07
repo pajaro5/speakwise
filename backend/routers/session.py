@@ -42,13 +42,14 @@ class ChunkExamplesRequest(BaseModel):
 
 class LogRequest(BaseModel):
     session_id: int
-    event: Literal["pattern_practiced", "chunk_used"]
+    event: Literal["pattern_practiced", "chunk_used", "chunk_spontaneous", "words_used"]
     pattern_id: int | None = None
     chunk: str | None = None
     transcript: str | None = None
     stress_results: list[dict] | None = None
     phoneme_errors: list[dict] | None = None
     phoneme_evaluated: int | None = None
+    week_words: list[dict] | None = None
 
 
 @router.post("/session/start")
@@ -124,4 +125,5 @@ async def post_log(body: LogRequest, db: sqlite3.Connection = Depends(get_db)) -
         stress_results=body.stress_results,
         phoneme_errors=body.phoneme_errors,
         phoneme_evaluated=body.phoneme_evaluated,
+        week_words=body.week_words,
     )

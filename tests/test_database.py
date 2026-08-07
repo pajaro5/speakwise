@@ -212,6 +212,96 @@ def test_log_phoneme_errors_records_real_phoneme_mismatch(temp_db_path: str) -> 
     assert rows[0]["correct"] == 0
 
 
+@pytest.fixture
+def form_id(temp_db_path: str) -> int:
+    with db_connection(temp_db_path) as conn:
+        word_id = conn.execute(
+            "INSERT INTO words (lemma, rank, type) VALUES ('think', 1, 'verb')"
+        ).lastrowid
+        form_id = conn.execute(
+            "INSERT INTO word_forms (word_id, form, tense) VALUES (?, 'thought', 'past')",
+            (word_id,),
+        ).lastrowid
+        conn.commit()
+    return form_id
+
+
+def test_upsert_user_progress_creates_row_on_first_use(temp_db_path: str, form_id: int) -> None:
+    """Reportado por el usuario: módulo 3 siempre muestra las mismas
+    week_words — causa real: user_progress nunca se escribía en ningún
+    lado, así que la tabla se quedaba vacía para siempre. upsert_user_
+    progress solo se llama con evidencia positiva real (la forma apareció
+    en la conversación), nunca para penalizar ausencia."""
+    from backend.database import upsert_user_progress
+
+    with db_connection(temp_db_path) as conn:
+        upsert_user_progress(conn, form_id, context="conv_prod", today="2026-08-07")
+
+        row = conn.execute(
+            "SELECT * FROM user_progress WHERE form_id = ? AND context = 'conv_prod'",
+            (form_id,),
+        ).fetchone()
+
+    assert row["exposures"] == 1
+    assert row["score"] == pytest.approx(0.15)
+    assert row["last_seen"] == "2026-08-07"
+    assert row["next_review"] == "2026-08-08"
+
+
+def test_upsert_user_progress_increments_and_pushes_out_next_review(
+    temp_db_path: str, form_id: int
+) -> None:
+    from backend.database import upsert_user_progress
+
+    with db_connection(temp_db_path) as conn:
+        upsert_user_progress(conn, form_id, context="conv_prod", today="2026-08-07")
+        upsert_user_progress(conn, form_id, context="conv_prod", today="2026-08-08")
+
+        row = conn.execute(
+            "SELECT * FROM user_progress WHERE form_id = ? AND context = 'conv_prod'",
+            (form_id,),
+        ).fetchone()
+
+    assert row["exposures"] == 2
+    assert row["score"] == pytest.approx(0.30)
+    assert row["next_review"] == "2026-08-11"
+
+
+def test_create_session_persists_comprehensibility(temp_db_path: str) -> None:
+    """Reportado por el usuario (investigación de "siempre me salen los
+    mismos ejercicios"): sessions.comprehensibility nunca se escribía en
+    ningún lado, así que _difficulty() se quedaba congelada en "maintain"
+    para siempre. comprehensibility es opcional (None cuando no hay
+    evidencia — ver services/comprehension.py) para no romper las
+    llamadas existentes que no la calculan."""
+    from backend.database import create_session
+
+    with db_connection(temp_db_path) as conn:
+        session_id = create_session(
+            conn, date="2026-08-07", topic="", transcript="hi", wpm=0.0, fillers=0,
+            feedback="", comprehensibility=4.2,
+        )
+        row = conn.execute("SELECT comprehensibility FROM sessions WHERE id = ?", (session_id,)).fetchone()
+
+    assert row["comprehensibility"] == pytest.approx(4.2)
+
+
+def test_update_session_persists_comprehensibility(temp_db_path: str) -> None:
+    from backend.database import create_session, update_session
+
+    with db_connection(temp_db_path) as conn:
+        session_id = create_session(
+            conn, date="2026-08-07", topic="", transcript="hi", wpm=0.0, fillers=0, feedback="",
+        )
+        update_session(
+            conn, session_id, transcript="hi there", wpm=100.0, fillers=1, feedback="",
+            comprehensibility=3.5,
+        )
+        row = conn.execute("SELECT comprehensibility FROM sessions WHERE id = ?", (session_id,)).fetchone()
+
+    assert row["comprehensibility"] == pytest.approx(3.5)
+
+
 def test_mark_chunk_used_updates_session_row(temp_db_path: str) -> None:
     from backend.database import create_session, mark_chunk_used
 
@@ -226,3 +316,22 @@ def test_mark_chunk_used_updates_session_row(temp_db_path: str) -> None:
 
     assert row["chunk_used"] == "I was thinking maybe"
     assert row["chunk_produced"] == 1
+
+
+def test_mark_chunk_spontaneous_updates_session_row(temp_db_path: str) -> None:
+    """chunk_spontaneous (uso NO forzado del chunk en conversación libre,
+    módulo 3) es un campo separado de chunk_produced (práctica forzada,
+    módulo 2) — mismo mecanismo, columna distinta, para no pisar el
+    resultado de módulo 2 al practicar módulo 3 en la misma sesión."""
+    from backend.database import create_session, mark_chunk_spontaneous
+
+    with db_connection(temp_db_path) as conn:
+        session_id = create_session(
+            conn, date="2026-08-05", topic="", transcript="hi", wpm=0.0, fillers=0, feedback="",
+        )
+
+        mark_chunk_spontaneous(conn, session_id)
+
+        row = conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
+
+    assert row["chunk_spontaneous"] == 1

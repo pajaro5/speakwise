@@ -371,6 +371,23 @@ async function handleFreeConversationRecording(audioBlob) {
   history.push({ role: "user", content: transcript.text });
   history.push({ role: "assistant", content: cleanReply });
 
+  if (todaysPlan.chunk_today) {
+    postJson("/api/log", {
+      session_id: sessionId,
+      event: "chunk_spontaneous",
+      chunk: todaysPlan.chunk_today.chunk,
+      transcript: transcript.text,
+    }).catch(() => {});
+  }
+  if ((todaysPlan.week_words || []).length) {
+    postJson("/api/log", {
+      session_id: sessionId,
+      event: "words_used",
+      transcript: transcript.text,
+      week_words: todaysPlan.week_words,
+    }).catch(() => {});
+  }
+
   statusEl.textContent = "Generating audio...";
   const audioUrl = await speak(cleanReply);
   const tutorBubble = appendChatMessage(cleanReply, "tutor", audioUrl);

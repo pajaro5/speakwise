@@ -3,6 +3,7 @@ from datetime import date
 
 from backend.database import create_session, update_session
 from backend.providers.base import LLMProvider
+from backend.services.comprehension import estimate_comprehensibility
 from backend.services.curriculum import build_todays_plan
 
 BASE_SYSTEM_PROMPT = (
@@ -68,6 +69,9 @@ async def get_tutor_reply(
     messages = [*history, {"role": "user", "content": text}]
     system_prompt = _build_system_prompt(conn, stress_results)
     reply = await llm.complete(messages=messages, system=system_prompt)
+    comprehensibility = estimate_comprehensibility(
+        wpm=wpm, fillers=fillers, word_count=len(text.split())
+    )
 
     if session_id is None:
         session_id = create_session(
@@ -78,10 +82,12 @@ async def get_tutor_reply(
             wpm=wpm,
             fillers=fillers,
             feedback=reply,
+            comprehensibility=comprehensibility,
         )
     else:
         update_session(
-            conn, session_id, transcript=text, wpm=wpm, fillers=fillers, feedback=reply
+            conn, session_id, transcript=text, wpm=wpm, fillers=fillers, feedback=reply,
+            comprehensibility=comprehensibility,
         )
 
     return reply, session_id

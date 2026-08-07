@@ -56,10 +56,15 @@ LINKING_WORDS = [
 def _forms_to_review(
     conn: sqlite3.Connection, today: str, limit: int = 5
 ) -> list[dict]:
-    """Formas due para repaso, o formas nuevas si todavía no hay progreso (día 1)."""
+    """Formas due para repaso, o formas nuevas si todavía no hay progreso (día 1).
+
+    form_id (wf.id) se expone para que el frontend lo devuelva en /api/log
+    (event=words_used) y así se pueda actualizar user_progress con la
+    forma exacta que se usó en conversación libre."""
     rows = conn.execute(
         """
-        SELECT wf.form, wf.tense, wf.lfc_focus, COALESCE(up.score, 0.0) AS score
+        SELECT wf.id AS form_id, wf.form, wf.tense, wf.lfc_focus,
+               COALESCE(up.score, 0.0) AS score
         FROM word_forms wf
         JOIN words w ON w.id = wf.word_id
         LEFT JOIN user_progress up
@@ -101,16 +106,26 @@ def _pattern_of_the_day(conn: sqlite3.Connection) -> dict | None:
 
 
 def _chunk_of_the_day(conn: sqlite3.Connection) -> dict | None:
+    """spontaneous_uses (uso espontáneo en conversación libre, módulo 3) es
+    la señal de repaso espaciado que pide DESIGN.md — pero produced_uses
+    (práctica forzada en módulo 2, ya registrada por mark_chunk_used) es un
+    desempate real disponible desde el primer día, mientras el alumno
+    todavía no generó uso espontáneo. Sin esto, spontaneous_uses queda en
+    0 para todos los chunks hasta que haya uso espontáneo real, y el
+    desempate caía en el rango de la palabra (que nunca cambia) — bug real
+    reportado por el usuario: módulo 2 siempre repetía "Be careful with
+    that." (rank más bajo del corpus, "be")."""
     row = conn.execute(
         """
         SELECT c.chunk, c.function,
-               COUNT(CASE WHEN s.chunk_spontaneous = 1 THEN 1 END) AS spontaneous_uses
+               COUNT(CASE WHEN s.chunk_spontaneous = 1 THEN 1 END) AS spontaneous_uses,
+               COUNT(CASE WHEN s.chunk_produced = 1 THEN 1 END) AS produced_uses
         FROM chunks c
         JOIN words w ON w.id = c.word_id
         LEFT JOIN sessions s ON s.chunk_used = c.chunk
         WHERE w.rank <= 150
         GROUP BY c.id
-        ORDER BY spontaneous_uses ASC, w.rank ASC
+        ORDER BY spontaneous_uses ASC, produced_uses ASC, w.rank ASC
         LIMIT 1
         """
     ).fetchone()
@@ -120,6 +135,7 @@ def _chunk_of_the_day(conn: sqlite3.Connection) -> dict | None:
         "chunk": row["chunk"],
         "function": row["function"],
         "spontaneous_uses": row["spontaneous_uses"],
+        "produced_uses": row["produced_uses"],
     }
 
 

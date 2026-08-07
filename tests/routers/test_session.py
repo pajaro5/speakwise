@@ -378,6 +378,75 @@ def test_log_chunk_used_returns_whether_produced(client) -> None:
     assert response.json() == {"ok": True, "produced": True}
 
 
+def test_log_chunk_spontaneous_marks_session_when_chunk_appears(client) -> None:
+    """Reportado por el usuario: módulo 2 siempre repite el mismo chunk. El
+    fix depende de que /api/log soporte event=chunk_spontaneous (módulo 3
+    reporta si el chunk del día apareció sin que se le pidiera)."""
+    test_client, db_path = client
+    with db_connection(db_path) as conn:
+        session_id = conn.execute(
+            "INSERT INTO sessions (date) VALUES ('2026-08-07')"
+        ).lastrowid
+        conn.commit()
+
+    response = test_client.post(
+        "/api/log",
+        json={
+            "session_id": session_id,
+            "event": "chunk_spontaneous",
+            "chunk": "Be careful with that.",
+            "transcript": "yeah be careful with that",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True, "spontaneous": True}
+    with db_connection(db_path) as conn:
+        row = conn.execute(
+            "SELECT chunk_spontaneous FROM sessions WHERE id = ?", (session_id,)
+        ).fetchone()
+    assert row["chunk_spontaneous"] == 1
+
+
+def test_log_words_used_updates_user_progress(client) -> None:
+    """Reportado por el usuario: "seguro pasa lo mismo en módulo 3" — sí,
+    y peor: user_progress nunca se escribía en ningún lado del código, así
+    que las week_words nunca cambiaban en absoluto. /api/log tiene que
+    soportar event=words_used (módulo 3 reporta qué week_words aparecieron
+    en la transcripción de conversación libre)."""
+    test_client, db_path = client
+    with db_connection(db_path) as conn:
+        word_id = conn.execute(
+            "INSERT INTO words (lemma, rank, type) VALUES ('think', 1, 'verb')"
+        ).lastrowid
+        form_id = conn.execute(
+            "INSERT INTO word_forms (word_id, form, tense) VALUES (?, 'thought', 'past')",
+            (word_id,),
+        ).lastrowid
+        session_id = conn.execute(
+            "INSERT INTO sessions (date) VALUES ('2026-08-07')"
+        ).lastrowid
+        conn.commit()
+
+    response = test_client.post(
+        "/api/log",
+        json={
+            "session_id": session_id,
+            "event": "words_used",
+            "transcript": "I thought about it yesterday.",
+            "week_words": [{"form_id": form_id, "form": "thought"}],
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True, "words_used": ["thought"]}
+    with db_connection(db_path) as conn:
+        row = conn.execute(
+            "SELECT exposures FROM user_progress WHERE form_id = ?", (form_id,)
+        ).fetchone()
+    assert row["exposures"] == 1
+
+
 def test_log_invalid_event_returns_422(client) -> None:
     test_client, _ = client
     response = test_client.post("/api/log", json={"session_id": 1, "event": "not_real"})

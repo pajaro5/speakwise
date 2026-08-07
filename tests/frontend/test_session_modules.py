@@ -237,6 +237,31 @@ def test_app_js_free_conversation_renders_chat_bubbles() -> None:
     assert '"tutor"' in handler
 
 
+def test_app_js_free_conversation_logs_words_used() -> None:
+    """Reportado por el usuario: "seguro pasa lo mismo en módulo 3" — sí:
+    user_progress nunca se escribía en ningún lado, así que week_words
+    nunca cambiaba. handleFreeConversationRecording manda event=words_used
+    con la transcripción y todaysPlan.week_words (que ahora incluye
+    form_id, ver curriculum.py) para que el backend pueda actualizarlas."""
+    js = _read("app.js")
+    handler = js.split("async function handleFreeConversationRecording")[1]
+    handler = handler.split("if (\"serviceWorker\"")[0]
+    assert 'event: "words_used"' in handler
+    assert "todaysPlan.week_words" in handler
+
+
+def test_app_js_free_conversation_logs_chunk_spontaneous_use() -> None:
+    """Reportado por el usuario: módulo 2 siempre repite el mismo chunk —
+    la causa era que módulo 3 nunca avisaba al backend si el chunk del día
+    aparecía sin que se le pidiera. handleFreeConversationRecording tiene
+    que mandar event=chunk_spontaneous cuando hay un chunk_today."""
+    js = _read("app.js")
+    handler = js.split("async function handleFreeConversationRecording")[1]
+    handler = handler.split("if (\"serviceWorker\"")[0]
+    assert 'event: "chunk_spontaneous"' in handler
+    assert "todaysPlan.chunk_today" in handler
+
+
 def test_app_js_free_conversation_sends_week_words_and_stress_to_tutor() -> None:
     """ITER-2: módulo 3 manda las palabras de la semana como target_words
     a /api/transcribe, y reenvía stress_results al tutor para que pueda

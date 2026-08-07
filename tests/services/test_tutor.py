@@ -113,3 +113,40 @@ async def test_tutor_system_prompt_omits_stress_note_when_all_correct(
         )
 
     assert "banana" not in llm.last_system_prompt
+
+
+@pytest.mark.asyncio
+async def test_tutor_persists_comprehensibility_estimate(seeded_db_path: str) -> None:
+    """Reportado por el usuario (investigación de "siempre me salen los
+    mismos ejercicios"): sessions.comprehensibility nunca se escribía en
+    ningún lado del código, así que _difficulty() se quedaba congelada en
+    "maintain" para siempre. get_tutor_reply ahora la estima (services/
+    comprehension.py, heurística sin costo extra de LLM) y la persiste."""
+    llm = _CapturingLLM()
+    with db_connection(seeded_db_path) as conn:
+        _, session_id = await get_tutor_reply(
+            conn, llm,
+            text="I go to work every day and I like it a lot",
+            history=[], session_id=None, topic="", wpm=120.0, fillers=0,
+        )
+
+        row = conn.execute(
+            "SELECT comprehensibility FROM sessions WHERE id = ?", (session_id,)
+        ).fetchone()
+
+    assert row["comprehensibility"] == pytest.approx(5.0)
+
+
+@pytest.mark.asyncio
+async def test_tutor_leaves_comprehensibility_null_for_empty_text(seeded_db_path: str) -> None:
+    llm = _CapturingLLM()
+    with db_connection(seeded_db_path) as conn:
+        _, session_id = await get_tutor_reply(
+            conn, llm, text="", history=[], session_id=None, topic="", wpm=0.0, fillers=0,
+        )
+
+        row = conn.execute(
+            "SELECT comprehensibility FROM sessions WHERE id = ?", (session_id,)
+        ).fetchone()
+
+    assert row["comprehensibility"] is None

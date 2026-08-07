@@ -4,6 +4,7 @@ from collections.abc import Generator, Iterator
 from datetime import date
 
 from backend.config import load_settings
+from backend.services.spaced_rep import next_review_date, score_after_success
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS words (
@@ -163,11 +164,12 @@ def create_session(
     wpm: float,
     fillers: int,
     feedback: str,
+    comprehensibility: float | None = None,
 ) -> int:
     cur = conn.execute(
-        "INSERT INTO sessions (date, topic, transcript, wpm, fillers, feedback) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        (date, topic, transcript, wpm, fillers, feedback),
+        "INSERT INTO sessions (date, topic, transcript, wpm, fillers, feedback, "
+        "comprehensibility) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (date, topic, transcript, wpm, fillers, feedback, comprehensibility),
     )
     conn.commit()
     return cur.lastrowid
@@ -181,11 +183,12 @@ def update_session(
     wpm: float,
     fillers: int,
     feedback: str,
+    comprehensibility: float | None = None,
 ) -> None:
     conn.execute(
-        "UPDATE sessions SET transcript = ?, wpm = ?, fillers = ?, feedback = ? "
-        "WHERE id = ?",
-        (transcript, wpm, fillers, feedback, session_id),
+        "UPDATE sessions SET transcript = ?, wpm = ?, fillers = ?, feedback = ?, "
+        "comprehensibility = ? WHERE id = ?",
+        (transcript, wpm, fillers, feedback, comprehensibility, session_id),
     )
     conn.commit()
 
@@ -232,12 +235,57 @@ def upsert_pattern_progress(
     conn.commit()
 
 
+def upsert_user_progress(
+    conn: sqlite3.Connection, form_id: int, *, context: str, today: str
+) -> None:
+    """Repaso espaciado (services/spaced_rep.py) para una forma de palabra.
+
+    Solo se llama con evidencia positiva real (la forma apareció en la
+    conversación libre) — nunca para penalizar ausencia, el alumno puede
+    simplemente no haber tenido ocasión de usarla en esa charla. Antes de
+    esto, user_progress nunca se escribía en ningún lado del código, así
+    que las week_words de módulo 3 nunca cambiaban (bug real reportado por
+    el usuario: "sigue repitiendo los mismos ejercicios").
+    """
+    existing = conn.execute(
+        "SELECT id, exposures, score FROM user_progress WHERE form_id = ? AND context = ?",
+        (form_id, context),
+    ).fetchone()
+    exposures = (existing["exposures"] if existing else 0) + 1
+    score = score_after_success(existing["score"] if existing else 0.0)
+    next_review = next_review_date(date.fromisoformat(today), exposures)
+
+    if existing:
+        conn.execute(
+            "UPDATE user_progress SET exposures = ?, score = ?, last_seen = ?, "
+            "next_review = ? WHERE id = ?",
+            (exposures, score, today, next_review, existing["id"]),
+        )
+    else:
+        conn.execute(
+            "INSERT INTO user_progress (form_id, context, exposures, last_seen, score, "
+            "next_review) VALUES (?, ?, ?, ?, ?, ?)",
+            (form_id, context, exposures, today, score, next_review),
+        )
+    conn.commit()
+
+
 def mark_chunk_used(
     conn: sqlite3.Connection, session_id: int, *, chunk: str, produced: bool
 ) -> None:
     conn.execute(
         "UPDATE sessions SET chunk_used = ?, chunk_produced = ? WHERE id = ?",
         (chunk, int(produced), session_id),
+    )
+    conn.commit()
+
+
+def mark_chunk_spontaneous(conn: sqlite3.Connection, session_id: int) -> None:
+    """Columna separada de chunk_produced — no pisa el resultado de la
+    práctica forzada de módulo 2 al detectar uso espontáneo en módulo 3
+    dentro de la misma sesión."""
+    conn.execute(
+        "UPDATE sessions SET chunk_spontaneous = 1 WHERE id = ?", (session_id,)
     )
     conn.commit()
 

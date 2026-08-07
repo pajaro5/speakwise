@@ -35,8 +35,9 @@ def test_forms_to_review_cold_start_returns_up_to_limit(seeded_db_path: str) -> 
 
     assert len(forms) == 5
     for f in forms:
-        assert set(f.keys()) == {"form", "tense", "lfc_focus", "score"}
+        assert set(f.keys()) == {"form_id", "form", "tense", "lfc_focus", "score"}
         assert f["score"] == 0.0  # nada revisado todavia
+        assert isinstance(f["form_id"], int)
 
 
 def test_forms_to_review_excludes_not_yet_due_and_orders_by_score(
@@ -134,8 +135,9 @@ def test_chunk_of_the_day_returns_a_chunk(seeded_db_path: str) -> None:
         chunk = _chunk_of_the_day(conn)
 
     assert chunk is not None
-    assert set(chunk.keys()) == {"chunk", "function", "spontaneous_uses"}
+    assert set(chunk.keys()) == {"chunk", "function", "spontaneous_uses", "produced_uses"}
     assert chunk["spontaneous_uses"] == 0
+    assert chunk["produced_uses"] == 0
 
 
 def test_chunk_of_the_day_prefers_least_spontaneous_uses(seeded_db_path: str) -> None:
@@ -144,6 +146,30 @@ def test_chunk_of_the_day_prefers_least_spontaneous_uses(seeded_db_path: str) ->
         for i in range(3):
             conn.execute(
                 "INSERT INTO sessions (date, chunk_used, chunk_spontaneous) "
+                "VALUES (?, ?, 1)",
+                (f"2026-08-0{i+1}", chunk_text),
+            )
+        conn.commit()
+
+        chunk = _chunk_of_the_day(conn)
+
+    assert chunk["chunk"] != chunk_text
+
+
+def test_chunk_of_the_day_prefers_least_produced_uses(seeded_db_path: str) -> None:
+    """Reportado por el usuario: módulo 2 siempre repite "Be careful with
+    that." — causa real: chunk_spontaneous nunca se escribe en ningún lado
+    del código (la detección de uso espontáneo en módulo 3 no existía),
+    así que siempre vale 0 para todos los chunks y el desempate cae en el
+    rango de la palabra, que nunca cambia. produced_uses sí se registra de
+    verdad cada vez que se completa módulo 2 (mark_chunk_used) — usarlo
+    como segundo criterio de desempate hace que la rotación funcione ya
+    mismo, sin esperar a que se use espontáneamente en conversación libre."""
+    with db_connection(seeded_db_path) as conn:
+        chunk_text = conn.execute("SELECT chunk FROM chunks LIMIT 1").fetchone()["chunk"]
+        for i in range(3):
+            conn.execute(
+                "INSERT INTO sessions (date, chunk_used, chunk_produced) "
                 "VALUES (?, ?, 1)",
                 (f"2026-08-0{i+1}", chunk_text),
             )

@@ -42,7 +42,7 @@ def test_today_week_words_match_contract_shape(client: TestClient) -> None:
 
     assert len(body["week_words"]) <= 5
     for w in body["week_words"]:
-        assert set(w.keys()) == {"form", "tense", "lfc_focus", "score"}
+        assert set(w.keys()) == {"form_id", "form", "tense", "lfc_focus", "score"}
 
 
 def test_today_pattern_focus_matches_contract_shape(client: TestClient) -> None:
@@ -58,7 +58,9 @@ def test_today_chunk_matches_contract_shape(client: TestClient) -> None:
     response = client.get("/api/today")
     body = response.json()
 
-    assert set(body["chunk_today"].keys()) == {"chunk", "function", "spontaneous_uses"}
+    assert set(body["chunk_today"].keys()) == {
+        "chunk", "function", "spontaneous_uses", "produced_uses",
+    }
 
 
 def test_today_responds_under_500ms_with_real_seeded_data(client: TestClient) -> None:

@@ -562,6 +562,31 @@ Suite completa: 211/211 (3 de integración deseleccionados).
 
 ---
 
+### Fase 9.16 — Módulo 2 y módulo 3 también repetían siempre lo mismo (motor de repaso espaciado nunca escrito) ✅
+
+El usuario reportó: "módulo 2 sigue repitiendo el chunk 'be careful with that', seguro pasa lo mismo en módulo 3" — confirmado, y peor de lo esperado en un caso.
+
+**Causa raíz (3 mecanismos distintos, mismo patrón: la lectura del motor de repaso espaciado estaba construida, la escritura nunca):**
+
+1. **Módulo 2 (chunk repetido):** `_chunk_of_the_day()` ordena por `chunk_spontaneous` (uso espontáneo en conversación libre, DESIGN.md) — pero esa columna nunca se escribía en ningún lado del código (la detección de uso espontáneo en módulo 3 no existía). Siempre 0 para todos los chunks, el desempate caía en el rango de la palabra (que nunca cambia), y "be" (rank más bajo) siempre ganaba.
+2. **Módulo 3 (week_words repetidas):** peor — `user_progress` (de donde salen las `week_words`) tenía **0 filas, siempre**, porque ningún código escribía ahí. Las 5 palabras de la semana no repetían seguido: nunca cambiaban en absoluto, en ninguna sesión.
+3. **Bonus, mismo patrón:** `sessions.comprehensibility` tampoco se escribía nunca, así que `_difficulty()` estaba permanentemente clavada en `"maintain"`.
+
+**Fix (3 piezas, alcance acordado con el usuario — "los tres ahora"):**
+
+1. **Módulo 2:** `_chunk_of_the_day()` ahora también cuenta `produced_uses` (`chunk_produced`, que SÍ se registra desde siempre vía `mark_chunk_used` en la práctica forzada de módulo 2) como segundo criterio de desempate, antes de caer al rango de la palabra. Rotación real desde el día 1, sin esperar a que exista uso espontáneo.
+2. **Detección de uso espontáneo real (para que `chunk_spontaneous` deje de estar muerto):** `mark_chunk_spontaneous()` (`database.py`) + `log_chunk_spontaneous_use()` (`log.py`, mismo criterio de matching que `log_chunk_used` pero en columna separada — no pisa el resultado de módulo 2) + nuevo evento `/api/log` `event=chunk_spontaneous`. Módulo 3 lo manda después de cada turno si hay `chunk_today`.
+3. **Repaso espaciado real para week_words:** `services/spaced_rep.py` (nuevo — DESIGN.md ya lo nombraba, nunca se había creado), variante simplificada de SM-2 sin ease factor (no hay calificación de calidad 0-5, solo señal binaria "la palabra apareció"): intervalos fijos crecientes (1/3/7/14/30 días) y score que sube +0.15 por uso exitoso, tope 1.0. `upsert_user_progress()` (`database.py`) + `log_words_used()` (`log.py`, matching por tokens contra la transcripción) + nuevo evento `/api/log` `event=words_used`. **Solo evidencia positiva** — no usar una palabra en una charla en particular NO la penaliza (el alumno puede simplemente no haber tenido ocasión), mismo criterio que `pattern_progress`/`phoneme_evaluated` de Fase 9.15. `_forms_to_review()` ahora expone `form_id` (necesario para que el frontend pueda mandarlo de vuelta).
+4. **Comprehensibility:** DESIGN.md proponía que el LLM tutor la evalúe en cada turno — se decidió NO hacerlo así (una llamada/salida estructurada extra por turno solo para un número, costo y latencia adicionales, más riesgo de romper el prompt conversacional ya afinado). En su lugar, `services/comprehension.py` (nuevo) deriva un proxy determinístico de wpm + proporción de fillers (ya calculados por turno, sin costo extra) — documentado explícitamente como desviación de diseño respecto a DESIGN.md. `create_session`/`update_session` (`database.py`) ahora aceptan y persisten `comprehensibility`; `get_tutor_reply` (`tutor.py`) la calcula y la pasa. Sin evidencia (transcripción vacía), devuelve `None` en vez de inventar un valor.
+
+Tests nuevos: `test_chunk_of_the_day_prefers_least_produced_uses` (`test_curriculum.py`), `test_mark_chunk_spontaneous_updates_session_row` + `test_upsert_user_progress_*` + `test_create/update_session_persists_comprehensibility` (`test_database.py`), `test_next_review_date_*` + `test_score_after_success_*` (`test_spaced_rep.py`, nuevo), `test_estimate_comprehensibility_*` (`test_comprehension.py`, nuevo), `test_log_chunk_spontaneous_*` + `test_log_words_used_*` (`test_log.py`), `test_log_chunk_spontaneous_marks_session_when_chunk_appears` + `test_log_words_used_updates_user_progress` (`test_session.py`), `test_tutor_persists_comprehensibility_estimate` + `test_tutor_leaves_comprehensibility_null_for_empty_text` (`test_tutor.py`), `test_app_js_free_conversation_logs_chunk_spontaneous_use` + `test_app_js_free_conversation_logs_words_used` (`test_session_modules.py`).
+
+**Verificado en vivo, ciclo completo real:** TTS con el chunk del día + una week_word → `/api/transcribe` → `/api/tutor` → `/api/log` (`chunk_spontaneous` y `words_used`) — confirmado en la DB real: `sessions.comprehensibility = 3.07` (antes siempre `NULL`), `sessions.chunk_spontaneous = 1`, `user_progress` con 2 filas nuevas (antes 0, siempre). `/api/today` confirmado sirviendo un chunk distinto y `week_words` distintas después de la práctica — la rotación funciona de punta a punta.
+
+Suite completa: 237/237 (3 de integración deseleccionados).
+
+---
+
 ### Fase 10 — Cierre de v1
 
 - Checklist completo de `DEFINITION-OF-DONE.md` (global + por feature de esta iteración)
