@@ -528,6 +528,20 @@ Suite completa: 200/200 (3 de integración deseleccionados).
 
 ---
 
+### Fase 9.14 — Control de velocidad de reproducción en módulo 1 ✅
+
+El usuario reportó que módulo 1 reproduce las palabras "super rápido" y pidió elegir velocidad: lento, normal, rápido.
+
+**Fix:** 3 botones (`#speed-slow-btn`/`#speed-normal-btn`/`#speed-fast-btn`) sobre "Listen to examples" en `index.html`. `SPEED_VALUES = { slow: 0.7, normal: 1, fast: 1.3 }` en `app.js` (valores típicos de apps de pronunciación, no vienen de una API — Kokoro/OpenAI TTS no tienen parámetro de velocidad en su síntesis, así que se controla client-side con `audio.playbackRate`, no regenerando el audio). `playText()`/`playTextWithButton()` reciben un `rate` opcional; `listenPatternBtn` lo pasa desde la variable global `playbackSpeed`, que los 3 botones actualizan y reflejan visualmente con la clase `speed-active`. Solo módulo 1 — el botón "Listen" de módulo 2 (chunk) queda sin cambios, no fue parte del pedido.
+
+Tests nuevos: `test_index_html_has_speed_control_buttons_in_module_1`, `test_app_js_speed_buttons_set_playback_rate`, `test_app_js_speed_selection_applies_to_pattern_listen_button`.
+
+**Verificado en vivo (Chrome):** click en "Slow" cambia `playbackSpeed` a `0.7` y activa la clase visual correcta (confirmado inspeccionando el estado real de la página, no solo el código); clic en "Listen to examples" dispara `POST /api/speak` con 200 OK (confirmado por network log). No se pudo confirmar el audio real audible en este entorno de automatización de Chrome — `audio.play()` no resuelve su promesa en esta sesión (limitación conocida de reproducir audio vía CDP sin salida de audio real / activación de usuario reconocida, no es un bug del código: `audio.playbackRate` se asigna antes de `await audio.play()`, y el mismo patrón de `playTextWithButton` ya se usaba antes de este cambio para los botones "Listen").
+
+Suite completa: 203/203 (3 de integración deseleccionados).
+
+---
+
 ### Fase 10 — Cierre de v1
 
 - Checklist completo de `DEFINITION-OF-DONE.md` (global + por feature de esta iteración)

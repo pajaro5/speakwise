@@ -8,6 +8,9 @@ const patternNameEl = document.getElementById("pattern-name");
 const patternRuleEl = document.getElementById("pattern-rule");
 const patternIpaEl = document.getElementById("pattern-ipa");
 const patternFamilyEl = document.getElementById("pattern-family");
+const speedSlowBtn = document.getElementById("speed-slow-btn");
+const speedNormalBtn = document.getElementById("speed-normal-btn");
+const speedFastBtn = document.getElementById("speed-fast-btn");
 const listenPatternBtn = document.getElementById("listen-pattern-btn");
 const practicePatternBtn = document.getElementById("practice-pattern-btn");
 const nextToModule2Btn = document.getElementById("next-to-module-2-btn");
@@ -38,6 +41,24 @@ let mediaRecorder = null;
 let audioChunks = [];
 let recording = false;
 let recordingMode = null; // "pattern" | "chunk" | "free"
+
+// El usuario reportó que módulo 1 reproducía las palabras "super rápido" —
+// pidió elegir entre lento/normal/rápido. 0.7/1/1.3 son valores típicos de
+// apps de pronunciación (Duolingo-style), no vienen de una API.
+const SPEED_VALUES = { slow: 0.7, normal: 1, fast: 1.3 };
+let playbackSpeed = SPEED_VALUES.normal;
+
+function setSpeed(speed, btn) {
+  playbackSpeed = SPEED_VALUES[speed];
+  [speedSlowBtn, speedNormalBtn, speedFastBtn].forEach((b) =>
+    b.classList.remove("speed-active")
+  );
+  btn.classList.add("speed-active");
+}
+
+speedSlowBtn.addEventListener("click", () => setSpeed("slow", speedSlowBtn));
+speedNormalBtn.addEventListener("click", () => setSpeed("normal", speedNormalBtn));
+speedFastBtn.addEventListener("click", () => setSpeed("fast", speedFastBtn));
 
 function showModule(el) {
   [module1El, module2El, module3El].forEach((m) => m.classList.add("hidden"));
@@ -75,16 +96,17 @@ async function speak(text) {
   return URL.createObjectURL(audioBlob);
 }
 
-async function playText(text) {
+async function playText(text, rate = 1) {
   const url = await speak(text);
   const audio = new Audio(url);
+  audio.playbackRate = rate;
   await audio.play();
 }
 
-async function playTextWithButton(text, btn) {
+async function playTextWithButton(text, btn, rate = 1) {
   btn.disabled = true;
   try {
-    await playText(text);
+    await playText(text, rate);
   } finally {
     btn.disabled = false;
   }
@@ -369,7 +391,7 @@ startSessionBtn.addEventListener("click", () => {
 
 listenPatternBtn.addEventListener("click", () => {
   const cleanWords = todaysPlan.pattern_focus.family.map(stripMarkup);
-  playTextWithButton(cleanWords.join(". "), listenPatternBtn).catch((error) => {
+  playTextWithButton(cleanWords.join(". "), listenPatternBtn, playbackSpeed).catch((error) => {
     statusEl.textContent = `Error: ${error.message}`;
   });
 });

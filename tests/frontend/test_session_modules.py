@@ -70,7 +70,7 @@ def test_app_js_disables_listen_buttons_while_playing_audio() -> None:
     feedback de que ya está cargando."""
     js = _read("app.js")
     assert "btn.disabled = true" in js
-    assert "playTextWithButton(cleanWords.join(\". \"), listenPatternBtn)" in js
+    assert "playTextWithButton(cleanWords.join(\". \"), listenPatternBtn, playbackSpeed)" in js
     assert "playTextWithButton(todaysPlan.chunk_today.chunk, listenChunkBtn)" in js
 
 
@@ -152,6 +152,32 @@ def test_ui_text_is_in_english_not_spanish() -> None:
     for marker in spanish_markers:
         assert marker not in html, f"queda texto en español en index.html: {marker!r}"
         assert marker not in js, f"queda texto en español en app.js: {marker!r}"
+
+
+def test_index_html_has_speed_control_buttons_in_module_1() -> None:
+    """El usuario reportó que módulo 1 reproduce las palabras "super rápido"
+    y pidió poder elegir velocidad: lento, normal, rápido."""
+    html = _read("index.html")
+    for element_id in ["speed-slow-btn", "speed-normal-btn", "speed-fast-btn"]:
+        assert f'id="{element_id}"' in html, f"falta #{element_id}"
+
+
+def test_app_js_speed_buttons_set_playback_rate() -> None:
+    js = _read("app.js")
+    assert "audio.playbackRate" in js
+    assert "SPEED_VALUES" in js
+    assert 'speedSlowBtn.addEventListener("click"' in js
+    assert 'speedNormalBtn.addEventListener("click"' in js
+    assert 'speedFastBtn.addEventListener("click"' in js
+
+
+def test_app_js_speed_selection_applies_to_pattern_listen_button() -> None:
+    """La velocidad elegida tiene que afectar al botón "Listen to examples"
+    de módulo 1 -- que es el que el usuario reportó demasiado rápido."""
+    js = _read("app.js")
+    listener = js.split('listenPatternBtn.addEventListener("click"')[1]
+    listener = listener.split("});\n\n")[0]
+    assert "playbackSpeed" in listener
 
 
 def test_app_js_renders_pattern_family_stress_and_respelling() -> None:
