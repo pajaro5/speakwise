@@ -148,6 +148,37 @@ async def test_transcribe_and_analyze_computes_phoneme_errors_when_target_words_
 
 
 @pytest.mark.asyncio
+async def test_transcribe_and_analyze_computes_phoneme_evaluated_count(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reportado por el usuario: el patrón "letras mudas kn-/wr-" (todas
+    monosílabas) siempre le mostraba los mismos ejercicios — analyze_stress
+    ignora monosílabas, así que stress_results siempre quedaba vacío y
+    pattern_progress.accuracy se congelaba en 0.0 para siempre. phoneme_
+    evaluated (independiente del número de sílabas) permite calcular
+    accuracy real igual para esos patrones (ver test_log.py)."""
+    raw_words = [{"w": "know", "start": 0.0, "end": 0.5}, {"w": "knee", "start": 0.5, "end": 1.0}]
+    fake_transcript = Transcript(text="know knee", wpm=0.0, words=raw_words, fillers=0)
+    provider = _FakeSTTProvider(fake_transcript)
+
+    monkeypatch.setattr(
+        "backend.services.acoustic.load_waveform", lambda audio: ("FAKE_WAVE", 16000)
+    )
+    monkeypatch.setattr(
+        "backend.services.acoustic.analyze_stress", lambda waveform, sr, words, target_words: []
+    )
+    monkeypatch.setattr(
+        "backend.services.acoustic.analyze_phonemes", lambda waveform, sr, words, target_words: []
+    )
+
+    result = await transcribe_and_analyze(
+        b"fake-webm-audio", provider=provider, target_words=["know", "knee", "write"]
+    )
+
+    assert result.phoneme_evaluated == 2
+
+
+@pytest.mark.asyncio
 async def test_transcribe_and_analyze_groups_errors_by_pattern_name(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

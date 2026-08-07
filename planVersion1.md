@@ -542,6 +542,26 @@ Suite completa: 203/203 (3 de integración deseleccionados).
 
 ---
 
+### Fase 9.15 — Un patrón se quedaba atascado para siempre (bug real de rotación) ✅
+
+El usuario reportó: "cada vez que uso la app, me salen solo los mismos ejercicios".
+
+**Causa raíz:** `_pattern_of_the_day()` (`curriculum.py`) elige el patrón con `accuracy` más baja (`ORDER BY accuracy ASC`). El patrón "letras mudas kn-/wr-" tiene las 5 palabras de su familia monosílabas (know, knee, write, wrong, knife) — y `analyze_stress()` ignora explícitamente las monosílabas (no hay contraste de sílaba tónica que medir), así que `stress_results` quedaba SIEMPRE vacío para ese patrón, sin importar qué tan bien se pronunciara. `log_pattern_practiced()` solo actualiza `accuracy` cuando recibe `stress_results` — sin eso, llamaba a `upsert_pattern_progress()` sin `correct`/`total`, y la `accuracy` se quedaba congelada en `0.0` para siempre (confirmado en la DB real: 16 sesiones practicadas, `accuracy = 0.0` exacto). Con el mínimo posible siempre en 0.0, ese patrón dominaba la selección de "menos practicado" indefinidamente — nunca podía mejorar ni rotar.
+
+**Fix:** nueva función `count_words_evaluated()` (`phoneme.py`) — cuenta cuántas target_words aparecen en la transcripción y son evaluables por `analyze_phonemes()` (están en CMU dict), sin importar el número de sílabas (a diferencia de `analyze_stress`). Se expone como `phoneme_evaluated` en `Transcript`/`/api/transcribe`. `log_pattern_practiced()` ahora tiene un fallback: si no hay `stress_results` pero sí `phoneme_evaluated`, calcula `correct = phoneme_evaluated - len(phoneme_errors)` y actualiza `accuracy` real con eso — mismo mecanismo de spaced-repetition que ya tenían los otros 4 patrones, ahora también disponible para el único 100% monosílabo. Sin ninguna señal (ni stress_results ni phoneme_evaluated — ej. el alumno no dijo nada reconocible), el comportamiento previo se mantiene (no se inventa un accuracy).
+
+Se reseteó a mano la fila de `pattern_progress` del patrón afectado en la DB real (los 16 registros previos eran datos inválidos, calculados con la fórmula rota — un accuracy promedio pesado por 16 "no-señal" contados como 0% habría seguido dominando la selección aun con el código arreglado).
+
+Tests nuevos: `test_count_words_evaluated_*` (`test_phoneme.py`), `test_transcribe_and_analyze_computes_phoneme_evaluated_count` (`test_acoustic.py`), `test_log_pattern_practiced_updates_accuracy_from_phoneme_evaluated_when_no_stress_results` + `test_log_pattern_practiced_keeps_accuracy_frozen_without_any_signal` (`test_log.py`), `test_log_pattern_practiced_uses_phoneme_evaluated_when_no_stress_results` (`test_session.py`), `test_app_js_pattern_recording_sends_phoneme_evaluated` (`test_session_modules.py`).
+
+**Verificado en vivo:** ciclo completo TTS→transcribe→log contra el patrón real "letras mudas kn-/wr-" (`/api/speak` con las 5 palabras → `/api/transcribe` con `target_words` → `/api/log`), confirmado que `phoneme_evaluated` llega no-cero y `pattern_progress.accuracy` deja de estar congelado en exactamente `0.0`.
+
+**Nota de diseño, no bug:** el algoritmo prioriza intencionalmente el patrón con peor accuracy ("practica lo que menos dominas primero") — con el fix, ese patrón ya puede mejorar y rotar con la práctica real, pero seguirá apareciendo seguido mientras siga siendo el más débil. Eso es la hipótesis de ITER-2, no un bug.
+
+Suite completa: 211/211 (3 de integración deseleccionados).
+
+---
+
 ### Fase 10 — Cierre de v1
 
 - Checklist completo de `DEFINITION-OF-DONE.md` (global + por feature de esta iteración)

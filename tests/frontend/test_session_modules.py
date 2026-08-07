@@ -262,6 +262,17 @@ def test_app_js_pattern_recording_sends_target_words_and_reports_stress(
     assert "results.filter" in handler
 
 
+def test_app_js_pattern_recording_sends_phoneme_evaluated() -> None:
+    """Reportado por el usuario: "cada vez que uso la app, me salen los
+    mismos ejercicios" — el patrón "letras mudas kn-/wr-" (monosílabas)
+    nunca actualizaba su accuracy porque stress_results siempre quedaba
+    vacío. El fix depende de mandar phoneme_evaluated al backend."""
+    js = _read("app.js")
+    handler = js.split("async function handlePatternRecording")[1]
+    handler = handler.split("async function handleChunkRecording")[0]
+    assert "phoneme_evaluated: transcript.phoneme_evaluated" in handler
+
+
 def test_app_js_pattern_recording_sends_pattern_name_and_logs_phoneme_errors() -> None:
     """ITER-2: además de target_words, módulo 1 manda pattern_name (para que
     el backend agrupe pattern_errors) y loguea phoneme_errors reales."""

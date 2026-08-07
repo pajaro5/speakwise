@@ -17,6 +17,7 @@ def log_pattern_practiced(
     session_id: int | None = None,
     stress_results: list[dict] | None = None,
     phoneme_errors: list[dict] | None = None,
+    phoneme_evaluated: int | None = None,
 ) -> None:
     if stress_results:
         correct = sum(1 for r in stress_results if r["correct"])
@@ -25,6 +26,17 @@ def log_pattern_practiced(
         )
         if session_id is not None:
             log_stress_results(conn, session_id, stress_results)
+    elif phoneme_evaluated:
+        # Fallback para patrones cuya familia es 100% monosílaba (ej.
+        # "letras mudas kn-/wr-") — analyze_stress las ignora (no hay
+        # contraste de sílaba tónica), así que stress_results siempre
+        # queda vacío y su accuracy se quedaba congelada en 0.0 para
+        # siempre, dominando la selección de "menos practicado" para
+        # siempre (bug real reportado por el usuario).
+        correct = phoneme_evaluated - len(phoneme_errors or [])
+        upsert_pattern_progress(
+            conn, pattern_id=pattern_id, correct=correct, total=phoneme_evaluated
+        )
     else:
         upsert_pattern_progress(conn, pattern_id=pattern_id)
 
@@ -57,6 +69,7 @@ def handle_log_event(
     transcript: str | None,
     stress_results: list[dict] | None = None,
     phoneme_errors: list[dict] | None = None,
+    phoneme_evaluated: int | None = None,
 ) -> dict:
     if event == "pattern_practiced":
         if pattern_id is None:
@@ -67,6 +80,7 @@ def handle_log_event(
             session_id=session_id,
             stress_results=stress_results,
             phoneme_errors=phoneme_errors,
+            phoneme_evaluated=phoneme_evaluated,
         )
         return {"ok": True}
 

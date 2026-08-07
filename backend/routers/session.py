@@ -48,6 +48,7 @@ class LogRequest(BaseModel):
     transcript: str | None = None
     stress_results: list[dict] | None = None
     phoneme_errors: list[dict] | None = None
+    phoneme_evaluated: int | None = None
 
 
 @router.post("/session/start")
@@ -80,6 +81,7 @@ async def post_transcribe(
         "words": transcript.words,
         "stress_results": transcript.stress_results,
         "phoneme_errors": transcript.phoneme_errors,
+        "phoneme_evaluated": transcript.phoneme_evaluated,
         "pattern_errors": transcript.pattern_errors,
     }
 
@@ -121,4 +123,5 @@ async def post_log(body: LogRequest, db: sqlite3.Connection = Depends(get_db)) -
         pattern_id=body.pattern_id, chunk=body.chunk, transcript=body.transcript,
         stress_results=body.stress_results,
         phoneme_errors=body.phoneme_errors,
+        phoneme_evaluated=body.phoneme_evaluated,
     )

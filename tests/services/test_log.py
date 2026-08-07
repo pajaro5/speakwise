@@ -51,6 +51,58 @@ def test_log_pattern_practiced_updates_accuracy_from_stress_results(db_path: str
     assert row["accuracy"] == pytest.approx(0.5)
 
 
+def test_log_pattern_practiced_updates_accuracy_from_phoneme_evaluated_when_no_stress_results(
+    db_path: str,
+) -> None:
+    """Reportado por el usuario: "cada vez que uso la app, me salen los
+    mismos ejercicios". Causa real: el patrón "letras mudas kn-/wr-" tiene
+    las 5 palabras monosílabas, y analyze_stress ignora monosílabas (no hay
+    contraste de sílaba tónica) — stress_results siempre vacío, así que
+    upsert_pattern_progress nunca recibía correct/total y accuracy se
+    quedaba congelada en 0.0 para siempre, dominando la selección de "menos
+    practicado" (_pattern_of_the_day ordena por accuracy ASC). Con
+    phoneme_evaluated (cuenta independiente del número de sílabas) se
+    puede calcular un accuracy real también para esos patrones."""
+    with db_connection(db_path) as conn:
+        conn.execute(
+            "INSERT INTO phonetic_patterns (id, name, priority) VALUES (1, 'letras mudas', 2)"
+        )
+        conn.commit()
+
+        log_pattern_practiced(
+            conn,
+            pattern_id=1,
+            phoneme_errors=[{"word": "write", "expected": "R AY1 T", "produced": "r eye"}],
+            phoneme_evaluated=4,
+        )
+
+        row = conn.execute(
+            "SELECT accuracy FROM pattern_progress WHERE pattern_id = 1"
+        ).fetchone()
+
+    assert row["accuracy"] == pytest.approx(0.75)
+
+
+def test_log_pattern_practiced_keeps_accuracy_frozen_without_any_signal(db_path: str) -> None:
+    """Sin stress_results NI phoneme_evaluated (ej. el usuario no dijo nada
+    reconocible), no hay evidencia real de un intento — no se debe inventar
+    un accuracy de 100% ni de 0%, se mantiene el comportamiento previo
+    (congelado en 0.0, solo cuenta la exposición)."""
+    with db_connection(db_path) as conn:
+        conn.execute(
+            "INSERT INTO phonetic_patterns (id, name, priority) VALUES (1, 'letras mudas', 2)"
+        )
+        conn.commit()
+
+        log_pattern_practiced(conn, pattern_id=1, phoneme_errors=[])
+
+        row = conn.execute(
+            "SELECT accuracy FROM pattern_progress WHERE pattern_id = 1"
+        ).fetchone()
+
+    assert row["accuracy"] == 0.0
+
+
 def test_log_pattern_practiced_logs_phoneme_errors(db_path: str) -> None:
     """ITER-2: los phoneme_errors (comparación fonémica real, wav2vec2) se
     guardan en phoneme_log igual que los stress_results incorrectos."""

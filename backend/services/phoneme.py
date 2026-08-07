@@ -139,6 +139,27 @@ def recognize_phonemes(waveform: np.ndarray, sr: int, start: float, end: float) 
     return transcription.split()
 
 
+def count_words_evaluated(words: list[dict], target_words: list[str]) -> int:
+    """Cuenta cuántas target_words aparecen en la transcripción y son
+    evaluables por analyze_phonemes (están en CMU dict) — a diferencia de
+    analyze_stress, no importa el número de sílabas. Usado para poder
+    calcular un accuracy real (correct = evaluated - len(phoneme_errors))
+    incluso para patrones cuya familia es 100% monosílaba, donde
+    analyze_stress nunca genera stress_results (bug real: esos patrones se
+    quedaban con accuracy congelada en 0.0 para siempre y dominaban la
+    selección de "menos practicado")."""
+    target_lower = {w.lower() for w in target_words}
+    count = 0
+    for w in words:
+        word_text = w["w"].strip(".,!?").lower()
+        if word_text not in target_lower:
+            continue
+        if expected_focus_phoneme(word_text) is None:
+            continue
+        count += 1
+    return count
+
+
 def analyze_phonemes(
     waveform: np.ndarray, sr: int, words: list[dict], target_words: list[str]
 ) -> list[dict]:

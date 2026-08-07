@@ -4,6 +4,7 @@ import pytest
 from backend.services.phoneme import (
     analyze_phonemes,
     arpabet_to_ipa,
+    count_words_evaluated,
     expected_focus_phoneme,
 )
 
@@ -76,6 +77,36 @@ def test_analyze_phonemes_ignores_words_not_in_target_list(
     errors = analyze_phonemes(np.zeros(16000), 16000, words, target_words=["average"])
 
     assert errors == []
+
+
+def test_count_words_evaluated_counts_target_words_found_in_transcript() -> None:
+    """Necesario para poder calcular accuracy incluso en palabras monosílabas
+    (analyze_stress las ignora — no hay contraste de sílaba tónica que
+    marcar), reportado por el usuario: el patrón "letras mudas kn-/wr-"
+    (know, knee, write, wrong, knife, todas monosílabas) nunca generaba
+    stress_results, así que su accuracy se quedaba congelada en 0.0 para
+    siempre y el patrón dominaba la selección de "menos practicado"."""
+    words = [{"w": "know", "start": 0.0, "end": 0.5}, {"w": "knee", "start": 0.5, "end": 1.0}]
+
+    count = count_words_evaluated(words, target_words=["know", "knee", "write", "wrong", "knife"])
+
+    assert count == 2
+
+
+def test_count_words_evaluated_ignores_words_not_in_target_list() -> None:
+    words = [{"w": "hello", "start": 0.0, "end": 0.5}]
+
+    count = count_words_evaluated(words, target_words=["know"])
+
+    assert count == 0
+
+
+def test_count_words_evaluated_ignores_words_not_in_cmu_dict() -> None:
+    words = [{"w": "zzznotaword", "start": 0.0, "end": 0.5}]
+
+    count = count_words_evaluated(words, target_words=["zzznotaword"])
+
+    assert count == 0
 
 
 @pytest.mark.integration

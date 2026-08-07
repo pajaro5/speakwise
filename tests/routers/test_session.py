@@ -57,11 +57,12 @@ def test_transcribe_returns_200_with_contract_shape(client) -> None:
     body = response.json()
     assert set(body.keys()) == {
         "text", "wpm", "fillers", "words", "stress_results", "phoneme_errors",
-        "pattern_errors",
+        "phoneme_evaluated", "pattern_errors",
     }
     assert body["text"] == "I go"
     assert body["stress_results"] == []
     assert body["phoneme_errors"] == []
+    assert body["phoneme_evaluated"] == 0
     assert body["pattern_errors"] == {}
 
 
@@ -319,6 +320,40 @@ def test_log_pattern_practiced_returns_200(client) -> None:
             "SELECT sessions_practiced FROM pattern_progress WHERE pattern_id = 1"
         ).fetchone()
     assert row["sessions_practiced"] == 1
+
+
+def test_log_pattern_practiced_uses_phoneme_evaluated_when_no_stress_results(client) -> None:
+    """Reportado por el usuario: "cada vez que uso la app, me salen los
+    mismos ejercicios" — /api/log tiene que pasar phoneme_evaluated a
+    log_pattern_practiced para que patrones 100% monosílabos (analyze_stress
+    los ignora) también puedan actualizar su accuracy real."""
+    test_client, db_path = client
+    with db_connection(db_path) as conn:
+        conn.execute(
+            "INSERT INTO phonetic_patterns (id, name, priority) VALUES (1, 'letras mudas', 2)"
+        )
+        session_id = conn.execute(
+            "INSERT INTO sessions (date) VALUES ('2026-08-05')"
+        ).lastrowid
+        conn.commit()
+
+    response = test_client.post(
+        "/api/log",
+        json={
+            "session_id": session_id,
+            "event": "pattern_practiced",
+            "pattern_id": 1,
+            "phoneme_errors": [],
+            "phoneme_evaluated": 4,
+        },
+    )
+
+    assert response.status_code == 200
+    with db_connection(db_path) as conn:
+        row = conn.execute(
+            "SELECT accuracy FROM pattern_progress WHERE pattern_id = 1"
+        ).fetchone()
+    assert row["accuracy"] == pytest.approx(1.0)
 
 
 def test_log_chunk_used_returns_whether_produced(client) -> None:

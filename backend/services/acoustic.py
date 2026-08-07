@@ -1,6 +1,6 @@
 from backend.providers.base import STTProvider, Transcript
 from backend.providers.factory import get_stt_provider
-from backend.services.phoneme import analyze_phonemes
+from backend.services.phoneme import analyze_phonemes, count_words_evaluated
 from backend.services.stress import analyze_stress, load_waveform
 
 FILLER_WORDS = {"um", "uh", "eh", "er", "ah", "hmm"}
@@ -46,11 +46,13 @@ async def transcribe_and_analyze(
 
     stress_results: list[dict] = []
     phoneme_errors: list[dict] = []
+    phoneme_evaluated = 0
     pattern_errors: dict[str, int] = {}
     if target_words:
         waveform, sr = load_waveform(audio)
         stress_results = analyze_stress(waveform, sr, raw.words, target_words)
         phoneme_errors = analyze_phonemes(waveform, sr, raw.words, target_words)
+        phoneme_evaluated = count_words_evaluated(raw.words, target_words)
         if pattern_name:
             error_words = {r["word"] for r in stress_results if not r["correct"]}
             error_words |= {e["word"] for e in phoneme_errors}
@@ -65,5 +67,6 @@ async def transcribe_and_analyze(
         fillers=_count_fillers(raw.words),
         stress_results=stress_results,
         phoneme_errors=phoneme_errors,
+        phoneme_evaluated=phoneme_evaluated,
         pattern_errors=pattern_errors,
     )

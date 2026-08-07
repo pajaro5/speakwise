@@ -304,6 +304,7 @@ async function handlePatternRecording(audioBlob) {
     pattern_id: todaysPlan.pattern_focus.id,
     stress_results: transcript.stress_results,
     phoneme_errors: transcript.phoneme_errors,
+    phoneme_evaluated: transcript.phoneme_evaluated,
   });
   const results = transcript.stress_results || [];
   if (results.length) {
