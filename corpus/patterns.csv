@@ -1,6 +1,6 @@
-name,rule_es,rule_ipa,family,priority
--age/-idge,"Termina en -age o -idge = /ɪdʒ/, la E no suena",/ɪdʒ/,"[""aver*age*"", ""man*age*"", ""vill*age*"", ""dam*age*"", ""pack*age*""]",1
--tion/-sion,Termina en -tion o -sion = /ʃən/ (o /ʒən/ tras vocal),/ʃən/,"[""na*tion*"", ""ac*tion*"", ""deci*sion*"", ""vi*sion*"", ""mis*sion*""]",1
-sílabas elididas,"Algunas vocales átonas desaparecen al hablar rápido, no se pronuncian todas las sílabas escritas",—,"[""diff~e~rent"", ""choc~o~late"", ""veg~e~table"", ""cam~e~ra"", ""fam~i~ly""]",2
-letras mudas kn-/wr-,Al inicio de palabra kn- y wr- no pronuncian la primera consonante,—,"[""~k~now"", ""~k~nee"", ""~w~rite"", ""~w~rong"", ""~k~nife""]",2
-schwa,"La vocal átona en sílabas no acentuadas se reduce a /ə/ (sonido neutro), sin importar qué letra sea",/ə/,"[""*a*bout"", ""b*a*nan*a*"", ""sof*a*"", ""*a*go"", ""camer*a*""]",1
+name,rule_es,rule_ipa,family,priority,family_stress
+-age/-idge,"Termina en -age o -idge = /ɪdʒ/, la E no suena",/ɪdʒ/,"[""aver*age*"", ""man*age*"", ""vill*age*"", ""dam*age*"", ""pack*age*""]",1,"[""AVerage"", ""MANage"", ""VILlage"", ""DAMage"", ""PACKage""]"
+-tion/-sion,Termina en -tion o -sion = /ʃən/ (o /ʒən/ tras vocal),/ʃən/,"[""na*tion*"", ""ac*tion*"", ""deci*sion*"", ""vi*sion*"", ""mis*sion*""]",1,"[""NAtion"", ""ACtion"", ""deCIsion"", ""VIsion"", ""MISsion""]"
+sílabas elididas,"Algunas vocales átonas desaparecen al hablar rápido, no se pronuncian todas las sílabas escritas",—,"[""diff~e~rent"", ""choc~o~late"", ""veg~e~table"", ""cam~e~ra"", ""fam~i~ly""]",2,"[""DIFferent"", ""CHOColate"", ""VEGetable"", ""CAMera"", ""FAMily""]"
+letras mudas kn-/wr-,Al inicio de palabra kn- y wr- no pronuncian la primera consonante,—,"[""~k~now"", ""~k~nee"", ""~w~rite"", ""~w~rong"", ""~k~nife""]",2,"[""know"", ""knee"", ""write"", ""wrong"", ""knife""]"
+schwa,"La vocal átona en sílabas no acentuadas se reduce a /ə/ (sonido neutro), sin importar qué letra sea",/ə/,"[""*a*bout"", ""b*a*nan*a*"", ""sof*a*"", ""*a*go"", ""camer*a*""]",1,"[""aBOUT"", ""baNANa"", ""SOfa"", ""aGO"", ""CAMera""]"

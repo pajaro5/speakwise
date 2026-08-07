@@ -72,9 +72,29 @@ def test_pattern_of_the_day_cold_start_picks_priority_1(seeded_db_path: str) -> 
         pattern = _pattern_of_the_day(conn)
 
     assert pattern is not None
-    assert set(pattern.keys()) == {"id", "name", "rule_es", "rule_ipa", "family"}
+    assert set(pattern.keys()) == {
+        "id", "name", "rule_es", "rule_ipa", "family", "family_stress", "family_respelling",
+    }
     assert isinstance(pattern["family"], list)
     assert isinstance(pattern["id"], int)
+
+
+def test_pattern_of_the_day_includes_stress_caps_and_respelling(seeded_db_path: str) -> None:
+    """El usuario pidió mostrar la sílaba tónica en mayúsculas (ej. "aVERage")
+    y, junto al IPA, una guía de pronunciación simple sin símbolos (ej.
+    "buk" para "book"). family_stress viene curado a mano en patterns.csv
+    (igual que el markup ~x~/*x*); family_respelling se calcula on the fly
+    con simple_respelling() (fonema-based, no depende de la ortografía)."""
+    with db_connection(seeded_db_path) as conn:
+        pattern = _pattern_of_the_day(conn)
+
+    assert isinstance(pattern["family_stress"], list)
+    assert len(pattern["family_stress"]) == len(pattern["family"])
+    assert isinstance(pattern["family_respelling"], list)
+    assert len(pattern["family_respelling"]) == len(pattern["family"])
+    # el patrón de prioridad 1 en cold-start es -age/-idge (ver test de arriba)
+    assert "AVerage" in pattern["family_stress"]
+    assert "A-ver-ij" in pattern["family_respelling"]
 
 
 def test_pattern_of_the_day_prefers_least_practiced(seeded_db_path: str) -> None:

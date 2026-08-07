@@ -154,6 +154,22 @@ def test_ui_text_is_in_english_not_spanish() -> None:
         assert marker not in js, f"queda texto en español en app.js: {marker!r}"
 
 
+def test_app_js_renders_pattern_family_stress_and_respelling() -> None:
+    """El usuario pidió mostrar la sílaba tónica en mayúsculas (ej.
+    "aVERage") y, junto al IPA, una guía de pronunciación simple sin
+    símbolos raros (ej. "buk" para "book"). renderPatternFamily recibe
+    family_stress/family_respelling (paralelos a family) y los muestra
+    junto a cada palabra."""
+    js = _read("app.js")
+    assert "function renderPatternFamily(family, familyStress, familyRespelling)" in js
+    assert "familyStress[i]" in js
+    assert "familyRespelling[i]" in js
+    assert (
+        "renderPatternFamily(pattern.family, pattern.family_stress, "
+        "pattern.family_respelling)" in js
+    )
+
+
 def test_app_js_renders_pattern_family_markup() -> None:
     """El usuario reportó que en "sílabas elididas" no queda claro cuál
     sílaba no se pronuncia. seed.py ahora marca las palabras con ~x~

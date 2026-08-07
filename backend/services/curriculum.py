@@ -1,7 +1,18 @@
 import json
 import random
+import re
 import sqlite3
 from datetime import date
+
+from backend.services.phoneme import simple_respelling
+
+# ~x~/*x* -- mismo markup que parsea app.js (stripMarkup) para el TTS, usado
+# acá para poder buscar la palabra "limpia" en cmudict.
+_MARKUP_RE = re.compile(r"[~*]")
+
+
+def _strip_markup(word: str) -> str:
+    return _MARKUP_RE.sub("", word)
 
 # Sin tabla de temas en el schema (DESIGN.md no la define) — pool curado en código.
 TOPIC_POOL = [
@@ -65,7 +76,7 @@ def _forms_to_review(
 def _pattern_of_the_day(conn: sqlite3.Connection) -> dict | None:
     row = conn.execute(
         """
-        SELECT p.id, p.name, p.rule_es, p.rule_ipa, p.family
+        SELECT p.id, p.name, p.rule_es, p.rule_ipa, p.family, p.family_stress
         FROM phonetic_patterns p
         LEFT JOIN pattern_progress pp ON pp.pattern_id = p.id
         WHERE pp.stage IS NULL OR pp.stage < 4
@@ -77,12 +88,15 @@ def _pattern_of_the_day(conn: sqlite3.Connection) -> dict | None:
     ).fetchone()
     if row is None:
         return None
+    family = json.loads(row["family"])
     return {
         "id": row["id"],
         "name": row["name"],
         "rule_es": row["rule_es"],
         "rule_ipa": row["rule_ipa"],
-        "family": json.loads(row["family"]),
+        "family": family,
+        "family_stress": json.loads(row["family_stress"]),
+        "family_respelling": [simple_respelling(_strip_markup(w)) for w in family],
     }
 
 

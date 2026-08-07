@@ -40,12 +40,13 @@ CREATE TABLE IF NOT EXISTS chunks (
 );
 
 CREATE TABLE IF NOT EXISTS phonetic_patterns (
-    id       INTEGER PRIMARY KEY,
-    name     TEXT,
-    rule_es  TEXT,
-    rule_ipa TEXT,
-    family   TEXT,
-    priority INTEGER
+    id            INTEGER PRIMARY KEY,
+    name          TEXT,
+    rule_es       TEXT,
+    rule_ipa      TEXT,
+    family        TEXT,
+    priority      INTEGER,
+    family_stress TEXT
 );
 
 CREATE TABLE IF NOT EXISTS curriculum_plan (
@@ -123,7 +124,19 @@ def _connect(db_path: str) -> sqlite3.Connection:
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA journal_mode = WAL")
     conn.executescript(SCHEMA)
+    _migrate(conn)
     return conn
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    # CREATE TABLE IF NOT EXISTS no agrega columnas a una tabla ya creada por
+    # una versión anterior del schema (ej. la DB de datos reales en el
+    # volumen de Docker) — a falta de un sistema de migraciones, se agregan
+    # a mano las columnas que falten.
+    existing = {row["name"] for row in conn.execute("PRAGMA table_info(phonetic_patterns)")}
+    if "family_stress" not in existing:
+        conn.execute("ALTER TABLE phonetic_patterns ADD COLUMN family_stress TEXT")
+        conn.commit()
 
 
 @contextmanager

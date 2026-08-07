@@ -34,6 +34,59 @@ def arpabet_to_ipa(phoneme: str) -> str | None:
     return _ARPABET_TO_IPA.get(base)
 
 
+# Fonema ARPAbet -> letras "de andar por casa" (no IPA) para una guía de
+# pronunciación simple, tipo diccionario para no-lingüistas.
+_ARPABET_TO_RESPELL = {
+    "AA": "ah", "AE": "a", "AH": "uh", "AO": "aw", "AW": "ow", "AY": "eye",
+    "B": "b", "CH": "ch", "D": "d", "DH": "th", "EH": "e", "ER": "er",
+    "EY": "ay", "F": "f", "G": "g", "HH": "h", "IH": "i", "IY": "ee",
+    "JH": "j", "K": "k", "L": "l", "M": "m", "N": "n", "NG": "ng",
+    "OW": "oh", "OY": "oy", "P": "p", "R": "r", "S": "s", "SH": "sh",
+    "T": "t", "TH": "th", "UH": "u", "UW": "oo", "V": "v", "W": "w",
+    "Y": "y", "Z": "z", "ZH": "zh",
+}
+
+
+def _syllabify_phonemes(phonemes: list[str]) -> list[list[str]]:
+    """Agrupa fonemas en sílabas por acentuación máxima del onset (cada
+    consonante entre dos vocales se va con la sílaba SIGUIENTE) — no es
+    syllabificación académica perfecta, pero es 100% consistente con
+    expected_stress_syllable/syllable_count porque usa la misma secuencia
+    de fonemas de CMU dict, no la ortografía (que no coincide de forma
+    confiable — probado con una librería de hyphenation real antes de
+    decidir esto)."""
+    vowel_idx = [i for i, p in enumerate(phonemes) if p[-1].isdigit()]
+    if not vowel_idx:
+        return [phonemes]
+    syllables = []
+    boundary = 0
+    for i, vi in enumerate(vowel_idx):
+        if i == len(vowel_idx) - 1:
+            syllables.append(phonemes[boundary:])
+        else:
+            syllables.append(phonemes[boundary : vi + 1])
+            boundary = vi + 1
+    return syllables
+
+
+def simple_respelling(word: str) -> str | None:
+    """Guía de pronunciación con letras comunes (no IPA), tipo diccionario
+    para no-lingüistas — ej. "book" -> "buk". La sílaba con acento primario
+    se muestra en mayúsculas, salvo en palabras de una sola sílaba (no hay
+    contraste de acento que marcar ahí)."""
+    entries = _cmu.get(word.lower())
+    if not entries:
+        return None
+    syllables = _syllabify_phonemes(entries[0])
+    parts = []
+    for syl in syllables:
+        letters = "".join(_ARPABET_TO_RESPELL.get(re.sub(r"\d$", "", p), "") for p in syl)
+        if len(syllables) > 1 and any(p.endswith("1") for p in syl):
+            letters = letters.upper()
+        parts.append(letters)
+    return "-".join(parts)
+
+
 def expected_focus_phoneme(word: str) -> tuple[str, str] | None:
     """Fonema (ARPAbet, IPA) con acento primario según CMU dict, o None si
     la palabra no está en el diccionario."""

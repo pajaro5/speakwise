@@ -506,6 +506,28 @@ Suite completa: 191/191 (3 de integración deseleccionados).
 
 ---
 
+### Fase 9.13 — Sílaba tónica en mayúsculas + respelling fonético simple ✅
+
+El usuario preguntó qué significa "stress correct" y cómo mostrar el acento tónico en la app; pidió 2 cosas concretas: (1) la palabra con la sílaba tónica en mayúsculas (ej. "aVERage"), y (2) junto al IPA (rule_ipa, "esa con los símbolos y letras raras"), una guía de pronunciación simple sin símbolos raros (ej. "book" → "buk").
+
+**Investigado y descartado:** `pyphen` (hyphenation) para derivar sílabas de la ortografía automáticamente — probado a mano contra el corpus real: falla en palabras cortas/comunes ("about" no separa nada, "banana" da solo 2 partes en vez de 3) porque las librerías de hyphenation optimizan puntos de corte de línea, no límites silábicos lingüísticos.
+
+**Diseño de 2 piezas, con la misma filosofía que el markup `~x~`/`*x*` de Fase 9.7 (curar a mano lo que no es confiable derivar automáticamente):**
+
+1. **`family_stress`** (curado a mano, `corpus/patterns.csv`, columna nueva paralela a `family`): capitalización ortográfica de la sílaba tónica para las 25 palabras de patrón (ej. `"AVerage"`, `"aBOUT"`). Palabras de una sola sílaba (kn-/wr-) quedan sin mayúsculas — no hay contraste de acento que marcar. Requirió migración manual (`_migrate()` en `database.py`, `ALTER TABLE ... ADD COLUMN` si falta) porque `CREATE TABLE IF NOT EXISTS` no agrega columnas a una tabla ya creada por una versión anterior del schema (la DB real del volumen Docker).
+
+2. **`simple_respelling(word)`** (`backend/services/phoneme.py`, general y automático, sin curar a mano): guía de pronunciación con letras comunes en vez de IPA — ej. `simple_respelling("book") == "buk"`. Basado en fonemas de CMU dict (no en ortografía, para no repetir el problema de pyphen): `_syllabify_phonemes()` agrupa fonemas por "maximal onset" (cada consonante entre 2 vocales va con la sílaba SIGUIENTE), `_ARPABET_TO_RESPELL` mapea cada fonema a letras simples, la sílaba con acento primario (`...1`) se pone en mayúsculas si hay más de una sílaba. `curriculum.py` calcula `family_respelling` al vuelo llamando `simple_respelling()` sobre cada palabra de `family` (sin el markup `~`/`*`) — no se guarda en la DB, a diferencia de `family_stress`.
+
+Tests nuevos: `tests/services/test_respelling.py` (5 casos, incluye "average"→"A-ver-ij", "about"→"uh-BOWT", "banana"→"buh-NA-nuh"), `test_pattern_of_the_day_includes_stress_caps_and_respelling`, `test_pattern_family_stress_matches_family_length`, `test_reseeding_updates_pattern_family_stress`, `test_app_js_renders_pattern_family_stress_and_respelling`.
+
+`renderPatternFamily()` en `app.js` ahora recibe `family`, `familyStress`, `familyRespelling` (paralelos) y muestra, junto a cada palabra: `aver<mark>age</mark> (AVerage · A-ver-ij)`.
+
+**Verificado en vivo (Chrome, DB real re-seedeada):** `/api/today` devuelve `family_stress`/`family_respelling` correctos para los 5 patrones; capturado en pantalla el patrón "-age/-idge" mostrando `average (AVerage · A-ver-ij)`, `village (VILlage · VIL-ij)`, etc. con el highlight `<mark>` de Fase 9.7 intacto.
+
+Suite completa: 200/200 (3 de integración deseleccionados).
+
+---
+
 ### Fase 10 — Cierre de v1
 
 - Checklist completo de `DEFINITION-OF-DONE.md` (global + por feature de esta iteración)

@@ -104,25 +104,27 @@ def seed_patterns(conn: sqlite3.Connection, rows: list[dict]) -> None:
         if existing:
             conn.execute(
                 "UPDATE phonetic_patterns SET rule_es = ?, rule_ipa = ?, family = ?, "
-                "priority = ? WHERE id = ?",
+                "priority = ?, family_stress = ? WHERE id = ?",
                 (
                     row["rule_es"],
                     row["rule_ipa"],
                     row["family"],
                     int(row["priority"]),
+                    row["family_stress"],
                     existing["id"],
                 ),
             )
             continue
         conn.execute(
-            "INSERT INTO phonetic_patterns (name, rule_es, rule_ipa, family, priority) "
-            "VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO phonetic_patterns (name, rule_es, rule_ipa, family, priority, "
+            "family_stress) VALUES (?, ?, ?, ?, ?, ?)",
             (
                 row["name"],
                 row["rule_es"],
                 row["rule_ipa"],
                 row["family"],
                 int(row["priority"]),
+                row["family_stress"],
             ),
         )
     conn.commit()

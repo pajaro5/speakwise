@@ -114,7 +114,7 @@ async function startSession() {
     patternNameEl.textContent = pattern.name;
     patternRuleEl.textContent = pattern.rule_es;
     patternIpaEl.textContent = pattern.rule_ipa;
-    patternFamilyEl.innerHTML = renderPatternFamily(pattern.family);
+    patternFamilyEl.innerHTML = renderPatternFamily(pattern.family, pattern.family_stress, pattern.family_respelling);
   }
   const chunk = todaysPlan.chunk_today;
   if (chunk) {
@@ -224,8 +224,17 @@ function renderMarkedWord(word) {
     .join("");
 }
 
-function renderPatternFamily(family) {
-  return family.map(renderMarkedWord).join(", ");
+function renderPatternFamily(family, familyStress, familyRespelling) {
+  return family
+    .map((word, i) => {
+      const marked = renderMarkedWord(word);
+      const stress = familyStress ? familyStress[i] : null;
+      const respelling = familyRespelling ? familyRespelling[i] : null;
+      const extras = [stress, respelling].filter(Boolean);
+      if (!extras.length) return marked;
+      return `${marked} <small>(${extras.map(escapeHtml).join(" · ")})</small>`;
+    })
+    .join(", ");
 }
 
 function stripMarkdown(text) {

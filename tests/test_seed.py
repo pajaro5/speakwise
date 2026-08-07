@@ -160,3 +160,40 @@ def test_reseeding_updates_pattern_family_markup(tmp_path) -> None:
             "SELECT family FROM phonetic_patterns WHERE name = 'sílabas elididas'"
         ).fetchone()
     assert "~" in row["family"]
+
+
+def test_pattern_family_stress_matches_family_length(seeded_db_path: str) -> None:
+    """El usuario pidió mostrar la sílaba tónica en mayúsculas (ej.
+    "aVERage") — curado a mano en patterns.csv (family_stress), igual que
+    el markup ~x~/*x* (family), porque una syllabificación ortográfica
+    general no es confiable (probado con pyphen antes de decidir esto)."""
+    import json
+
+    with db_connection(seeded_db_path) as conn:
+        rows = conn.execute(
+            "SELECT name, family, family_stress FROM phonetic_patterns"
+        ).fetchall()
+
+    for row in rows:
+        family = json.loads(row["family"])
+        family_stress = json.loads(row["family_stress"])
+        assert len(family_stress) == len(family), row["name"]
+
+
+def test_reseeding_updates_pattern_family_stress(tmp_path) -> None:
+    db_path = str(tmp_path / "seed_test2.db")
+    seed.run(db_path)
+    with db_connection(db_path) as conn:
+        conn.execute(
+            "UPDATE phonetic_patterns SET family_stress = '[\"different\"]' "
+            "WHERE name = '-age/-idge'"
+        )
+        conn.commit()
+
+    seed.run(db_path)
+
+    with db_connection(db_path) as conn:
+        row = conn.execute(
+            "SELECT family_stress FROM phonetic_patterns WHERE name = '-age/-idge'"
+        ).fetchone()
+    assert "AVerage" in row["family_stress"]
