@@ -296,6 +296,94 @@ def test_full_cycle_transcribe_tutor_speak_under_10_seconds(client) -> None:
     assert elapsed < 10.0
 
 
+def test_diagnostic_words_returns_priority_1_pattern_words(client) -> None:
+    """Fase D del plan de mejora (comparación vs ELSA/BoldVoice): un
+    diagnóstico inicial que siembra pattern_progress con datos reales, en
+    vez de arrancar la rotación completamente en frío."""
+    test_client, db_path = client
+    with db_connection(db_path) as conn:
+        conn.execute(
+            "INSERT INTO phonetic_patterns (id, name, priority, family) "
+            "VALUES (1, 'schwa', 1, '[\"about\", \"banana\"]')"
+        )
+        conn.commit()
+
+    response = test_client.get("/api/diagnostic-words")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "words" in body
+    assert isinstance(body["words"], list)
+    assert len(body["words"]) > 0
+    assert all("*" not in w and "~" not in w for w in body["words"])
+
+
+def test_diagnostic_seeds_pattern_progress_from_real_audio(client, tmp_path) -> None:
+    """No puede ser audio fake — necesita decodificarse de verdad, mismo
+    criterio que test_transcribe_with_target_words_returns_stress_results."""
+    import subprocess
+
+    import numpy as np
+    import soundfile as sf
+
+    test_client, db_path = client
+    sr = 16000
+    t = np.linspace(0, 1.0, sr, endpoint=False)
+    tone = (np.sin(2 * np.pi * 200 * t) * 0.5).astype("float32")
+    wav_path = tmp_path / "tone.wav"
+    webm_path = tmp_path / "tone.webm"
+    sf.write(wav_path, tone, sr)
+    subprocess.run(
+        ["ffmpeg", "-y", "-i", str(wav_path), "-c:a", "libopus", str(webm_path)],
+        check=True, capture_output=True,
+    )
+
+    response = test_client.post(
+        "/api/diagnostic",
+        files={"audio": ("audio.webm", webm_path.read_bytes(), "audio/webm")},
+    )
+
+    assert response.status_code == 200
+    assert "text" in response.json()
+
+
+def test_translate_practice_returns_english_and_notes(client) -> None:
+    """Fase C del plan de mejora (comparación vs Loora): el alumno escribe
+    en español lo que quiere decir y recibe la traducción para practicar
+    — vocabulario que nace de su necesidad real, no solo de la rotación
+    fija de modismos curados."""
+    test_client, _ = client
+
+    class _JsonLLM(LLMProvider):
+        async def complete(self, messages, system, max_tokens=400) -> str:
+            import json
+
+            return json.dumps({"english": "I'm running late.", "notes": "informal"})
+
+    app.dependency_overrides[session_router.get_llm_provider] = lambda: _JsonLLM()
+
+    response = test_client.post(
+        "/api/translate-practice", json={"spanish_text": "Voy a llegar tarde"}
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"english": "I'm running late.", "notes": "informal"}
+
+
+def test_translate_practice_returns_503_when_llm_returns_bad_json(client) -> None:
+    test_client, _ = client
+
+    class _BadLLM(LLMProvider):
+        async def complete(self, messages, system, max_tokens=400) -> str:
+            return "no es json"
+
+    app.dependency_overrides[session_router.get_llm_provider] = lambda: _BadLLM()
+
+    response = test_client.post("/api/translate-practice", json={"spanish_text": "hola"})
+
+    assert response.status_code == 503
+
+
 def test_chunk_examples_returns_three_examples(client) -> None:
     test_client, _ = client
 

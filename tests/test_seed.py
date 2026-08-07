@@ -33,14 +33,20 @@ def test_every_word_form_has_arpabet_phonemes_and_lfc_focus(seeded_db_path: str)
         assert row["lfc_focus"], "lfc_focus no debe estar vacío"
 
 
-def test_phonetic_patterns_exactly_6(seeded_db_path: str) -> None:
-    """El usuario pidió agregar un patrón nuevo: la "t" muda después de
-    "n" (ej. "internet" -> "inner-net"), común en inglés americano
-    casual."""
+def test_phonetic_patterns_exactly_13(seeded_db_path: str) -> None:
+    """El usuario pidió una comparación rigurosa contra ELSA Speak/Loora y
+    un plan de mejora. Fase A: 5 patrones nuevos respaldados por análisis
+    contrastivo español→inglés (ɪ/iː, v/b, θ/ð, consonante final,
+    epéntesis de e- antes de s+consonante), de mayor impacto real para un
+    hispanohablante que algunos de los patrones anteriores (más
+    "curiosidad ortográfica" que error frecuente). Fase B: 2 patrones de
+    enlace entre palabras (linking/reducciones), el fenómeno más frecuente
+    en habla real y que antes no se cubría en absoluto (solo dentro de
+    una palabra, nunca entre palabras)."""
     with db_connection(seeded_db_path) as conn:
         count = conn.execute("SELECT COUNT(*) FROM phonetic_patterns").fetchone()[0]
 
-    assert count == 6
+    assert count == 13
 
 
 def test_chunks_are_curated_idioms_with_meaning(seeded_db_path: str) -> None:
@@ -70,7 +76,7 @@ def test_seed_is_idempotent(seeded_db_path: str) -> None:
 
     assert words == 50
     assert forms >= 150
-    assert patterns == 6
+    assert patterns == 13
     assert chunks >= 25
 
 
@@ -171,6 +177,20 @@ def test_pattern_family_words_have_marked_syllables(seeded_db_path: str) -> None
         assert "*" in word, f"falta resaltar la vocal átona en {word!r}"
     for word in by_name["t muda después de n"]:
         assert "~" in word, f"falta marcar la t muda en {word!r}"
+    for word in by_name["vocal corta i vs. larga i"]:
+        assert "*" in word, f"falta resaltar la vocal en {word!r}"
+    for word in by_name["v no es b"]:
+        assert "*" in word, f"falta resaltar la v en {word!r}"
+    for word in by_name["th no es s/t/d"]:
+        assert "*" in word, f"falta resaltar el th en {word!r}"
+    for word in by_name["consonante final que se cae"]:
+        assert "*" in word, f"falta resaltar la consonante final en {word!r}"
+    for word in by_name["sin e antes de s+consonante"]:
+        assert "*" in word, f"falta resaltar la s inicial en {word!r}"
+    for word in by_name["enlace entre palabras"]:
+        assert "*" in word, f"falta resaltar el enlace en {word!r}"
+    for word in by_name["reducciones con 'to'"]:
+        assert "*" in word, f"falta resaltar la reducción en {word!r}"
 
 
 def test_reseeding_updates_pattern_family_markup(tmp_path) -> None:

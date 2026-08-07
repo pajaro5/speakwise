@@ -160,6 +160,36 @@ def count_words_evaluated(words: list[dict], target_words: list[str]) -> int:
     return count
 
 
+def analyze_phrase_linking(text: str, target_words: list[str]) -> list[dict]:
+    """Para patrones de enlace entre palabras (ej. "get it" -> "geddit")
+    — a diferencia de analyze_stress/analyze_phonemes, que comparan
+    fonemas reales de UNA palabra vía el modelo acústico, acá no hay forma
+    de verificar si el alumno enlazó/redujo bien: Whisper transcribe a
+    texto ortográfico, no distingue "get it" enlazado de "get it" dicho
+    con una pausa — eso requeriría análisis acústico real (ver Fase E).
+    Se verifica honestamente por presencia de la frase completa en la
+    transcripción (mismo criterio ya usado en log_chunk_used) — "correct"
+    significa "intentó la frase", no "la enlazó correctamente". Solo
+    procesa targets de más de una palabra; las palabras sueltas ya las
+    cubren analyze_stress/analyze_phonemes."""
+    text_lower = text.lower()
+    results = []
+    for phrase in target_words:
+        if " " not in phrase:
+            continue
+        phrase_core = phrase.strip(".,!?").lower()
+        found = phrase_core in text_lower
+        results.append(
+            {
+                "word": phrase,
+                "expected_syl": 0,
+                "detected_syl": 0 if found else 1,
+                "correct": found,
+            }
+        )
+    return results
+
+
 def analyze_phonemes(
     waveform: np.ndarray, sr: int, words: list[dict], target_words: list[str]
 ) -> list[dict]:

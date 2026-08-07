@@ -10,7 +10,9 @@ from backend.providers.base import LLMProvider, STTProvider, TTSProvider
 from backend.providers.factory import get_llm_provider, get_stt_provider, get_tts_provider
 from backend.services.acoustic import transcribe_and_analyze
 from backend.services.chunk_examples import get_chunk_examples
+from backend.services.diagnostic import apply_diagnostic_results, build_diagnostic_plan
 from backend.services.log import handle_log_event
+from backend.services.translate import get_translation_practice
 from backend.services.tutor import get_tutor_reply
 
 router = APIRouter(prefix="/api", tags=["session"])
@@ -42,6 +44,10 @@ class ChunkExamplesRequest(BaseModel):
     chunk: str
     function: str
     meaning_es: str | None = None
+
+
+class TranslatePracticeRequest(BaseModel):
+    spanish_text: str
 
 
 class LogRequest(BaseModel):
@@ -91,6 +97,33 @@ async def post_transcribe(
     }
 
 
+@router.get("/diagnostic-words")
+async def get_diagnostic_words(db: sqlite3.Connection = Depends(get_db)) -> dict:
+    """Fase D del plan de mejora (comparación vs ELSA/BoldVoice): palabras
+    de los patrones de mayor impacto real para un hispanohablante, para
+    leer en un diagnóstico inicial de 30 segundos en vez de arrancar la
+    rotación de módulo 1 completamente en frío."""
+    plan = build_diagnostic_plan(db)
+    words = [w for pattern in plan for w in pattern["words"]]
+    return {"words": words}
+
+
+@router.post("/diagnostic")
+async def post_diagnostic(
+    audio: UploadFile = File(...),
+    db: sqlite3.Connection = Depends(get_db),
+    stt: STTProvider = Depends(get_stt_provider),
+) -> dict:
+    plan = build_diagnostic_plan(db)
+    words = [w for pattern in plan for w in pattern["words"]]
+    audio_bytes = await audio.read()
+    transcript = await transcribe_and_analyze(audio_bytes, provider=stt, target_words=words)
+    apply_diagnostic_results(
+        db, plan, transcript_text=transcript.text, phoneme_errors=transcript.phoneme_errors
+    )
+    return {"text": transcript.text}
+
+
 @router.post("/speak")
 async def post_speak(
     body: SpeakRequest, tts: TTSProvider = Depends(get_tts_provider)
@@ -124,6 +157,13 @@ async def post_chunk_examples(
     return await get_chunk_examples(
         llm, chunk=body.chunk, function=body.function, meaning_es=body.meaning_es
     )
+
+
+@router.post("/translate-practice")
+async def post_translate_practice(
+    body: TranslatePracticeRequest, llm: LLMProvider = Depends(get_llm_provider)
+) -> dict:
+    return await get_translation_practice(llm, spanish_text=body.spanish_text)
 
 
 @router.post("/log")

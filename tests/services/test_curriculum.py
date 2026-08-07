@@ -93,9 +93,11 @@ def test_pattern_of_the_day_includes_stress_caps_and_respelling(seeded_db_path: 
     assert len(pattern["family_stress"]) == len(pattern["family"])
     assert isinstance(pattern["family_respelling"], list)
     assert len(pattern["family_respelling"]) == len(pattern["family"])
-    # el patrón de prioridad 1 en cold-start es -age/-idge (ver test de arriba)
-    assert "AVerage" in pattern["family_stress"]
-    assert "A-ver-ij" in pattern["family_respelling"]
+    # Fase A del plan de mejora (comparación vs ELSA/Loora): -age/-idge se
+    # bajó a priority 2 (más "curiosidad ortográfica" que error frecuente
+    # de un hispanohablante) — el patrón de prioridad 1 en cold-start con
+    # menor id es ahora "-tion/-sion".
+    assert "NAtion" in pattern["family_stress"]
 
 
 def test_pattern_of_the_day_prefers_least_practiced(seeded_db_path: str) -> None:

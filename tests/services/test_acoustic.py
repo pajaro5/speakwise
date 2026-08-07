@@ -148,6 +148,37 @@ async def test_transcribe_and_analyze_computes_phoneme_errors_when_target_words_
 
 
 @pytest.mark.asyncio
+async def test_transcribe_and_analyze_merges_phrase_linking_into_stress_results(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Fase B del plan de mejora: patrones de enlace entre palabras (ej.
+    "get it"). Se mezclan en stress_results (no en un campo nuevo) para
+    que log_pattern_practiced/el frontend no necesiten saber que existen
+    — mismo mecanismo de accuracy que ya usan las palabras sueltas."""
+    raw_words = [{"w": "get", "start": 0.0, "end": 0.3}, {"w": "it", "start": 0.3, "end": 0.5}]
+    fake_transcript = Transcript(text="get it", wpm=0.0, words=raw_words, fillers=0)
+    provider = _FakeSTTProvider(fake_transcript)
+
+    monkeypatch.setattr(
+        "backend.services.acoustic.load_waveform", lambda audio: ("FAKE_WAVE", 16000)
+    )
+    monkeypatch.setattr(
+        "backend.services.acoustic.analyze_stress", lambda waveform, sr, words, target_words: []
+    )
+    monkeypatch.setattr(
+        "backend.services.acoustic.analyze_phonemes", lambda waveform, sr, words, target_words: []
+    )
+
+    result = await transcribe_and_analyze(
+        b"fake-webm-audio", provider=provider, target_words=["get it"]
+    )
+
+    assert result.stress_results == [
+        {"word": "get it", "expected_syl": 0, "detected_syl": 0, "correct": True}
+    ]
+
+
+@pytest.mark.asyncio
 async def test_transcribe_and_analyze_computes_phoneme_evaluated_count(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

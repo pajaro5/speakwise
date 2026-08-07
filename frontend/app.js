@@ -8,6 +8,8 @@ const patternNameEl = document.getElementById("pattern-name");
 const patternRuleEl = document.getElementById("pattern-rule");
 const patternIpaEl = document.getElementById("pattern-ipa");
 const patternFamilyEl = document.getElementById("pattern-family");
+const diagnosticBtn = document.getElementById("diagnostic-btn");
+const diagnosticWordsListEl = document.getElementById("diagnostic-words-list");
 const speedSlowBtn = document.getElementById("speed-slow-btn");
 const speedNormalBtn = document.getElementById("speed-normal-btn");
 const speedFastBtn = document.getElementById("speed-fast-btn");
@@ -22,6 +24,11 @@ const chunkFunctionEl = document.getElementById("chunk-function");
 const listenChunkBtn = document.getElementById("listen-chunk-btn");
 const recordChunkBtn = document.getElementById("record-chunk-btn");
 const chunkFeedbackEl = document.getElementById("chunk-feedback");
+const translateInputEl = document.getElementById("translate-input");
+const translateBtn = document.getElementById("translate-btn");
+const translateEnglishEl = document.getElementById("translate-english");
+const translateNotesEl = document.getElementById("translate-notes");
+const translateListenBtn = document.getElementById("translate-listen-btn");
 const chunkExamplesStatusEl = document.getElementById("chunk-examples-status");
 const chunkExampleSentenceEl = document.getElementById("chunk-example-sentence");
 const chunkExampleParagraphEl = document.getElementById("chunk-example-paragraph");
@@ -126,19 +133,21 @@ async function transcribeAudio(audioBlob, targetWords, patternName) {
   return parseJsonOrThrow(response);
 }
 
+function renderPatternFocus(pattern) {
+  if (!pattern) return;
+  patternNameEl.textContent = pattern.name;
+  patternRuleEl.textContent = pattern.rule_es;
+  patternIpaEl.textContent = pattern.rule_ipa;
+  patternFamilyEl.innerHTML = renderPatternFamily(pattern.family, pattern.family_stress, pattern.family_respelling);
+}
+
 async function startSession() {
   statusEl.textContent = "Loading today's plan...";
   todaysPlan = await (await fetch("/api/today")).json();
   const started = await postJson("/api/session/start", { topic: "" });
   sessionId = started.session_id;
 
-  const pattern = todaysPlan.pattern_focus;
-  if (pattern) {
-    patternNameEl.textContent = pattern.name;
-    patternRuleEl.textContent = pattern.rule_es;
-    patternIpaEl.textContent = pattern.rule_ipa;
-    patternFamilyEl.innerHTML = renderPatternFamily(pattern.family, pattern.family_stress, pattern.family_respelling);
-  }
+  renderPatternFocus(todaysPlan.pattern_focus);
   const chunk = todaysPlan.chunk_today;
   if (chunk) {
     chunkTextEl.textContent = chunk.chunk;
@@ -154,16 +163,18 @@ async function startSession() {
   showModule(module1El);
 }
 
-const AUTO_STOP_MS = { pattern: 4000, chunk: 5000 };
+const AUTO_STOP_MS = { pattern: 4000, chunk: 5000, diagnostic: 15000 };
 const BUTTON_FOR_MODE = {
   pattern: practicePatternBtn,
   chunk: recordChunkBtn,
   free: recordBtn,
+  diagnostic: diagnosticBtn,
 };
 const IDLE_LABEL = {
   pattern: "🎙️ Record my attempt",
   chunk: "🎙️ Use it in a sentence",
   free: "🎙️ Record",
+  diagnostic: "🎯 Take diagnostic",
 };
 
 async function startRecording(mode) {
@@ -212,6 +223,8 @@ async function handleRecordingStop() {
       await handlePatternRecording(audioBlob);
     } else if (recordingMode === "chunk") {
       await handleChunkRecording(audioBlob);
+    } else if (recordingMode === "diagnostic") {
+      await handleDiagnosticRecording(audioBlob);
     } else {
       await handleFreeConversationRecording(audioBlob);
     }
@@ -342,6 +355,18 @@ async function handleChunkRecording(audioBlob) {
   statusEl.textContent = "";
 }
 
+async function handleDiagnosticRecording(audioBlob) {
+  statusEl.textContent = "Analyzing your pronunciation...";
+  const formData = new FormData();
+  formData.append("audio", audioBlob, "audio.webm");
+  const response = await fetch("/api/diagnostic", { method: "POST", body: formData });
+  await parseJsonOrThrow(response);
+  todaysPlan = await (await fetch("/api/today")).json();
+  renderPatternFocus(todaysPlan.pattern_focus);
+  diagnosticWordsListEl.textContent = "";
+  statusEl.textContent = "Diagnostic complete — practice now focuses on your weak points.";
+}
+
 function appendChatMessage(text, sender, audioUrl) {
   const bubble = document.createElement("div");
   bubble.className = `chat-bubble chat-${sender}`;
@@ -426,6 +451,16 @@ listenPatternBtn.addEventListener("click", () => {
 
 practicePatternBtn.addEventListener("click", () => startRecording("pattern"));
 
+diagnosticBtn.addEventListener("click", async () => {
+  try {
+    const { words } = await (await fetch("/api/diagnostic-words")).json();
+    diagnosticWordsListEl.textContent = words.join(", ");
+    await startRecording("diagnostic");
+  } catch (error) {
+    statusEl.textContent = `Error: ${error.message}`;
+  }
+});
+
 nextToModule2Btn.addEventListener("click", () => {
   showModule(module2El);
   loadChunkExamples();
@@ -438,6 +473,30 @@ listenChunkBtn.addEventListener("click", () => {
 });
 
 recordChunkBtn.addEventListener("click", () => startRecording("chunk"));
+
+translateBtn.addEventListener("click", async () => {
+  const spanishText = translateInputEl.value.trim();
+  if (!spanishText) return;
+  translateBtn.disabled = true;
+  translateEnglishEl.textContent = "Translating...";
+  translateNotesEl.textContent = "";
+  translateListenBtn.classList.add("hidden");
+  try {
+    const result = await postJson("/api/translate-practice", { spanish_text: spanishText });
+    translateEnglishEl.textContent = result.english;
+    translateNotesEl.textContent = result.notes || "";
+    translateListenBtn.classList.remove("hidden");
+    translateListenBtn.onclick = () => {
+      playTextWithButton(result.english, translateListenBtn).catch((error) => {
+        statusEl.textContent = `Error: ${error.message}`;
+      });
+    };
+  } catch (error) {
+    translateEnglishEl.textContent = `Error: ${error.message}`;
+  } finally {
+    translateBtn.disabled = false;
+  }
+});
 
 nextToModule3Btn.addEventListener("click", () => showModule(module3El));
 

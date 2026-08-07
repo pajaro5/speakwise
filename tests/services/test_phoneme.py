@@ -3,6 +3,7 @@ import pytest
 
 from backend.services.phoneme import (
     analyze_phonemes,
+    analyze_phrase_linking,
     arpabet_to_ipa,
     count_words_evaluated,
     expected_focus_phoneme,
@@ -107,6 +108,34 @@ def test_count_words_evaluated_ignores_words_not_in_cmu_dict() -> None:
     count = count_words_evaluated(words, target_words=["zzznotaword"])
 
     assert count == 0
+
+
+def test_analyze_phrase_linking_marks_correct_when_phrase_present() -> None:
+    """Fase B del plan de mejora (comparación vs ELSA/Loora): patrones de
+    enlace entre palabras (ej. "get it", que se pronuncia "geddit") — a
+    diferencia de analyze_stress/analyze_phonemes (que comparan fonemas de
+    UNA palabra), acá no se puede verificar acústicamente si el alumno
+    enlazó bien (Whisper transcribe texto, no distingue "get it" enlazado
+    de "get it" con pausa) — se verifica honestamente por presencia de la
+    frase completa en la transcripción, mismo criterio que ya usa
+    log_chunk_used para chunks."""
+    results = analyze_phrase_linking("I said get it now", target_words=["get it", "single"])
+
+    assert results == [{"word": "get it", "expected_syl": 0, "detected_syl": 0, "correct": True}]
+
+
+def test_analyze_phrase_linking_marks_incorrect_when_phrase_absent() -> None:
+    results = analyze_phrase_linking("I don't know", target_words=["get it"])
+
+    assert results == [{"word": "get it", "expected_syl": 0, "detected_syl": 1, "correct": False}]
+
+
+def test_analyze_phrase_linking_ignores_single_word_targets() -> None:
+    """Las palabras sueltas (sin espacio) ya las cubre analyze_stress/
+    analyze_phonemes — analyze_phrase_linking solo se ocupa de frases."""
+    results = analyze_phrase_linking("hello there", target_words=["hello"])
+
+    assert results == []
 
 
 @pytest.mark.integration

@@ -45,6 +45,25 @@ def test_app_js_sends_meaning_es_to_chunk_examples() -> None:
     assert "meaning_es: todaysPlan.chunk_today.meaning_es" in handler
 
 
+def test_index_html_has_translate_practice_elements() -> None:
+    """Fase C del plan de mejora (comparación vs Loora): el alumno puede
+    escribir en español lo que quiere decir y practicar la traducción,
+    en vez de depender solo de la rotación fija de modismos curados."""
+    html = _read("index.html")
+    for element_id in [
+        "translate-input", "translate-btn", "translate-english", "translate-notes",
+        "translate-listen-btn",
+    ]:
+        assert f'id="{element_id}"' in html, f"falta #{element_id}"
+
+
+def test_app_js_translate_practice_calls_endpoint_and_shows_result() -> None:
+    js = _read("app.js")
+    assert '"/api/translate-practice"' in js
+    assert "translateEnglishEl.textContent" in js
+    assert "translateNotesEl.textContent" in js
+
+
 def test_index_html_has_chunk_module_elements() -> None:
     html = _read("index.html")
     for element_id in ["chunk-text", "listen-chunk-btn", "record-chunk-btn", "chunk-feedback"]:
@@ -172,6 +191,31 @@ def test_ui_text_is_in_english_not_spanish() -> None:
     for marker in spanish_markers:
         assert marker not in html, f"queda texto en español en index.html: {marker!r}"
         assert marker not in js, f"queda texto en español en app.js: {marker!r}"
+
+
+def test_index_html_has_diagnostic_elements_in_module_1() -> None:
+    """Fase D del plan de mejora (comparación vs ELSA/BoldVoice): un
+    diagnóstico inicial que siembra la rotación con datos reales de las
+    palabras que el alumno de verdad pronuncia mal, en vez de arrancar en
+    frío."""
+    html = _read("index.html")
+    for element_id in ["diagnostic-btn", "diagnostic-words-list"]:
+        assert f'id="{element_id}"' in html, f"falta #{element_id}"
+
+
+def test_app_js_diagnostic_flow_fetches_words_and_records() -> None:
+    js = _read("app.js")
+    assert '"/api/diagnostic-words"' in js
+    assert "startRecording(\"diagnostic\")" in js
+
+
+def test_app_js_handles_diagnostic_recording_and_refreshes_plan() -> None:
+    js = _read("app.js")
+    assert "async function handleDiagnosticRecording" in js
+    handler = js.split("async function handleDiagnosticRecording")[1]
+    handler = handler.split("\nasync function ")[0]
+    assert '"/api/diagnostic"' in handler
+    assert '"/api/today"' in handler
 
 
 def test_index_html_has_speed_control_buttons_in_module_1() -> None:

@@ -87,7 +87,8 @@ def _pattern_of_the_day(conn: sqlite3.Connection) -> dict | None:
         WHERE pp.stage IS NULL OR pp.stage < 4
         ORDER BY COALESCE(pp.accuracy, 0.0) ASC,
                  COALESCE(pp.sessions_practiced, 0) ASC,
-                 p.priority ASC
+                 p.priority ASC,
+                 p.id ASC
         LIMIT 1
         """
     ).fetchone()

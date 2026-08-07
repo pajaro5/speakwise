@@ -21,6 +21,11 @@
 
     <section id="module-1" class="module hidden">
         <h2>Module 1 — Pronunciation</h2>
+        <div id="diagnostic-panel">
+            <p>New here? Take a quick check-in so practice focuses on your specific weak points.</p>
+            <p id="diagnostic-words-list"></p>
+            <button id="diagnostic-btn">🎯 Take diagnostic</button>
+        </div>
         <p id="pattern-name"></p>
         <p id="pattern-rule"></p>
         <p>Pronunciation: <strong id="pattern-ipa"></strong></p>
@@ -50,6 +55,14 @@
         </div>
         <button id="record-chunk-btn">🎙️ Use it in a sentence</button>
         <p id="chunk-feedback"></p>
+        <div id="translate-practice">
+            <p>What do you want to say? Type it in Spanish:</p>
+            <input type="text" id="translate-input" placeholder="E.g. Voy a llegar un poco tarde">
+            <button id="translate-btn">Translate</button>
+            <p id="translate-english"></p>
+            <p id="translate-notes"></p>
+            <button id="translate-listen-btn" class="hidden">Listen</button>
+        </div>
         <button id="next-to-module-3-btn" class="hidden">Next →</button>
     </section>
 
