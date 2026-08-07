@@ -33,11 +33,14 @@ def test_every_word_form_has_arpabet_phonemes_and_lfc_focus(seeded_db_path: str)
         assert row["lfc_focus"], "lfc_focus no debe estar vacío"
 
 
-def test_phonetic_patterns_exactly_5(seeded_db_path: str) -> None:
+def test_phonetic_patterns_exactly_6(seeded_db_path: str) -> None:
+    """El usuario pidió agregar un patrón nuevo: la "t" muda después de
+    "n" (ej. "internet" -> "inner-net"), común en inglés americano
+    casual."""
     with db_connection(seeded_db_path) as conn:
         count = conn.execute("SELECT COUNT(*) FROM phonetic_patterns").fetchone()[0]
 
-    assert count == 5
+    assert count == 6
 
 
 def test_chunks_at_least_150_with_function_and_level(seeded_db_path: str) -> None:
@@ -62,7 +65,7 @@ def test_seed_is_idempotent(seeded_db_path: str) -> None:
 
     assert words == 50
     assert forms >= 150
-    assert patterns == 5
+    assert patterns == 6
     assert chunks >= 150
 
 
@@ -138,6 +141,8 @@ def test_pattern_family_words_have_marked_syllables(seeded_db_path: str) -> None
         assert "*" in word, f"falta resaltar el sufijo en {word!r}"
     for word in by_name["schwa"]:
         assert "*" in word, f"falta resaltar la vocal átona en {word!r}"
+    for word in by_name["t muda después de n"]:
+        assert "~" in word, f"falta marcar la t muda en {word!r}"
 
 
 def test_reseeding_updates_pattern_family_markup(tmp_path) -> None:

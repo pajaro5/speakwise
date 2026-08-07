@@ -608,6 +608,20 @@ Suite completa: 243/243 (3 de integración deseleccionados).
 
 ---
 
+### Fase 9.18 — Nuevo patrón fonético: "t" muda después de "n" ✅
+
+El usuario pidió agregar un 6to patrón a módulo 1, con una captura de un video de referencia (regla de inglés americano: la "t" entre "n" y una vocal átona no se pronuncia — "internet" suena "inner-net"), con ejemplos concretos: internet, international, intervention, interrupt.
+
+**Fix:** nueva fila en `corpus/patterns.csv` ("t muda después de n", priority 2, mismo estilo `~x~` que "letras mudas kn-/wr-" para marcar la letra silenciosa). Familia: los 4 ejemplos exactos del usuario + "twenty" (mismo patrón n+t+vocal átona, ejemplo clásico) para mantener 5 palabras por patrón como el resto del corpus. `family_stress` curado a mano (INternet, interNAtional, interVENtion, interRUPT, TWENty). No hizo falta tocar código — `seed_patterns()`, `_pattern_of_the_day()`, `simple_respelling()` y el frontend ya son genéricos sobre la cantidad de patrones.
+
+Se actualizaron los 2 tests que asumían "exactamente 5 patrones" a "exactamente 6" (`test_phonetic_patterns_exactly_6`, antes `_5`; y el conteo en `test_seed_is_idempotent`), y se agregó el patrón nuevo a `test_pattern_family_words_have_marked_syllables`.
+
+**Verificado en vivo:** re-seedeada la DB real, forzada la selección de este patrón como "el de hoy" y confirmado en pantalla — lista de viñetas con la "t" tachada en las 5 palabras ("in̶t̶ernet", etc.), stress caps y respelling automático mostrados correctamente junto a cada una.
+
+Suite completa: 243/243 (3 de integración deseleccionados, la nueva no requirió tests adicionales más allá de los de conteo/markup — es dato de corpus, no lógica nueva).
+
+---
+
 ### Fase 10 — Cierre de v1
 
 - Checklist completo de `DEFINITION-OF-DONE.md` (global + por feature de esta iteración)
